@@ -1,0 +1,67 @@
+# =====================================================================
+#  Configuración de la tarea U2_T3A — Forma anidada de Horner,
+#  derivadas y deflación polinomial
+# ---------------------------------------------------------------------
+#  Todo lo que se ajusta sin tocar código vive aquí: los pesos, las
+#  tolerancias y la URL del webhook. Los enunciados de los ejercicios están
+#  en profe/ejercicios/*.md y los bancos teóricos en preguntas.yaml.
+#
+#  Esta es la ENTREGA A de la Tarea 3 (la B es Müller y Bairstow, en su
+#  propio repositorio U2_T3B). Cada entrega tiene su pestaña en la hoja de
+#  cálculo y sus propios 2 intentos.
+# =====================================================================
+tarea:
+  # `id` es el nombre de la PESTAÑA de la hoja de cálculo (el Apps Script la
+  # crea sola la primera vez) y también la parte que fija la semilla del
+  # alumno. Si lo cambias, cambian los ejercicios de todos.
+  id: "U2_T3A"
+  nombre: "Unidad 2 - Tarea 3A: Forma anidada de Horner, derivadas y deflación"
+  materia: "Métodos Numéricos"
+
+ponderacion:
+  automatico: 0.70
+  manual: 0.30
+
+evaluacion:
+  tolerancia_simple: 1e-4          # respuestas numéricas (relativa)
+  tolerancia_funcion: 1e-6         # tupla que devuelve horner(a, x0)
+  min_aprobacion: 0.90             # 90 % de los 100 puntos para poder enviar
+  max_iter: 60                     # lo lee el motor aunque aquí no se use
+  criterios_paro: [0.01, 0.1, 0.001]   # ídem: no hay criterio de paro en Horner
+  accion: "guardar"
+  webhook_token: "43f6f220-fc6e-4972-a69e-a11b54a629ec"
+  apps_script_url: "https://script.google.com/macros/s/AKfycbzD5k2BVwJ6pHjBgbc3-f1pbV9zrX0AloZfPiCyHSrsRZ7Kfno6ZQOnqzEbTikVlO6lRQ/exec"
+
+# 6 preguntas = 100 puntos. El orden es el del cuaderno: el código del método
+# va ANTES de las preguntas de la tabla, porque esas se contestan con la
+# función que el alumno acaba de escribir (a mano solo se llena la división
+# sintética, que es su actividad).
+slots:
+  - id: 1
+    tipo: "teorica"
+    banco: "HORNER_INTRO"
+    peso: 10
+  - id: 2
+    tipo: "funcion"
+    metodo: "HORNER"
+    ficha: "horner_funcion"
+    peso: 25
+  - id: 3
+    tipo: "ejercicio_num"
+    metodo: "HORNER"
+    ficha: "horner_valor"
+    peso: 15
+  - id: 4
+    tipo: "ejercicio_num"
+    metodo: "HORNER"
+    ficha: "horner_derivada"
+    peso: 15
+  - id: 5
+    tipo: "vector"
+    metodo: "DEFLACION"
+    ficha: "deflacion_valor"
+    peso: 25
+  - id: 6
+    tipo: "teorica"
+    banco: "HORNER_CONCL"
+    peso: 10

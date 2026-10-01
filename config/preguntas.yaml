@@ -1,0 +1,111 @@
+# =====================================================================
+#  Bancos teóricos (opción múltiple) — Tarea 3A
+# ---------------------------------------------------------------------
+#  `correcta` es el índice (0 = la primera opción listada) de la opción
+#  buena. El motor baraja las opciones y reetiqueta a) b) c) d), así que la
+#  letra que ve el alumno NO es la de este archivo.
+#  HORNER_INTRO -> pregunta 1 (va al principio, antes de programar)
+#  HORNER_CONCL -> pregunta 6 (va al final, después de la deflación)
+# =====================================================================
+HORNER_INTRO:
+  - id: "hintro_01"
+    titulo: "Cuánto ahorra la forma anidada"
+    pregunta: >-
+      Para evaluar un polinomio de grado $n$ **término a término** se calculan todas
+      las potencias $x^2, x^3, \dots, x^n$, lo que cuesta $O(n^2)$ multiplicaciones.
+      La **forma anidada de Horner** las reduce a $O(n)$.
+      **¿Cuántas multiplicaciones necesita Horner?**
+    opciones:
+      - "a) Exactamente $n$ multiplicaciones y $n$ sumas"
+      - "b) Sigue necesitando $O(n^2)$, solo cambia el orden"
+      - "c) $2n$ multiplicaciones, el doble que antes"
+      - "d) Ninguna: solo sumas"
+    correcta: 0
+
+  - id: "hintro_02"
+    titulo: "Qué devuelve la división sintética"
+    pregunta: >-
+      Al evaluar $P(x)$ en $x_0$ con el algoritmo de Horner se generan los
+      coeficientes $b_k$ (con $b_n=a_n$ y $b_k=a_k+b_{k+1}x_0$).
+      Además del valor $P(x_0)=b_0$, **¿qué representan los demás $b_k$?**
+    opciones:
+      - "a) Los coeficientes del cociente $Q(x)$ de dividir $P(x)$ entre $(x-x_0)$"
+      - "b) Las derivadas sucesivas de $P$ en $x_0$"
+      - "c) Nada: son basura intermedia"
+      - "d) Las raíces restantes del polinomio"
+    correcta: 0
+
+  - id: "hintro_03"
+    titulo: "La segunda corrida"
+    pregunta: >-
+      Para obtener la **primera derivada** $P'(x_0)$ se aplica una **segunda** corrida
+      de división sintética, esta vez sobre los coeficientes $b_k$, obteniendo $c_k$.
+      **¿Cuál es el resultado?**
+    opciones:
+      - "a) $P'(x_0)=c_1$: la derivada sale del penúltimo coeficiente"
+      - "b) $P'(x_0)=c_0$: igual que en la primera corrida"
+      - "c) La segunda corrida da $P''(x_0)$"
+      - "d) Hay que derivar a mano: la división sintética no sirve para derivar"
+    correcta: 0
+
+  - id: "hintro_04"
+    titulo: "Para qué sirve deflactar"
+    pregunta: >-
+      Ya conoces una raíz exacta $r$ de $P(x)$ (es decir $P(r)=0$). Quieres encontrar
+      **las demás** raíces. **¿Qué ganas al deflactar?**
+    opciones:
+      - "a) Bajas el grado en 1, así que el siguiente método trabaja con un problema más simple"
+      - "b) Nada: la raíz $r$ sigue apareciendo en el polinomio reducido"
+      - "c) Que la raíz $r$ se vuelva doble"
+      - "d) Convierte el polinomio en uno de primer grado siempre"
+    correcta: 0
+
+HORNER_CONCL:
+  - id: "hconcl_01"
+    titulo: "Horner en un microcontrolador"
+    pregunta: >-
+      Un microcontrolador de 8 bits debe evaluar un polinomio de calibración de grado 4
+      cada 10 ms. La multiplicación es la operación más costosa.
+      **¿Por qué conviene programarlo en forma anidada?**
+    opciones:
+      - "a) Porque hace menos multiplicaciones, y además cada una se apoya en el resultado anterior"
+      - "b) Porque así el resultado es exacto, sin error de redondeo"
+      - "c) Porque el microcontrolador no puede sumar"
+      - "d) Porque el polinomio deja de ser de grado 4"
+    correcta: 0
+
+  - id: "hconcl_02"
+    titulo: "El residuo de la deflación"
+    pregunta: >-
+      Deflactas $P(x)$ entre $(x-r)$ y el residuo $b_0$ te sale distinto de cero.
+      **¿Qué significa?**
+    opciones:
+      - "a) Que $r$ no es raíz exacta de $P$: el residuo es $P(r)$"
+      - "b) Que te equivocaste en la aritmética pero $r$ sí es raíz"
+      - "c) Que el polinomio no tiene raíces reales"
+      - "d) Nada especial: el residuo siempre es distinto de cero"
+    correcta: 0
+
+  - id: "hconcl_03"
+    titulo: "Error de redondeo"
+    pregunta: >-
+      Además del tiempo de cómputo, Horner tiene otra ventaja numérica.
+      **¿Cuál?**
+    opciones:
+      - "a) Evita calcular potencias grandes como $x^{8}$: no amplifica el error de redondeo"
+      - "b) Obliga a redondear cada paso con 2 decimales"
+      - "c) Usa números enteros en lugar de flotantes"
+      - "d) Es más preciso porque ordena los coeficientes de menor a mayor"
+    correcta: 0
+
+  - id: "hconcl_04"
+    titulo: "Decisión: todas las raíces"
+    pregunta: >-
+      Tienes un polinomio de grado 5, ya encontraste **una** raíz real y necesitas
+      **todas** las raíces. **¿Cuál es el camino correcto?**
+    opciones:
+      - "a) Deflactar con esa raíz y repetir el método sobre el polinomio de grado 4"
+      - "b) Volver a correr el método sobre el polinomio original con otro valor inicial, hasta agotar los intentos"
+      - "c) Descartar esa raíz: no sirve para encontrar las demás"
+      - "d) Convertirlo en un sistema de ecuaciones no lineales"
+    correcta: 0
