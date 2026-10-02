@@ -36,7 +36,22 @@ from profe.core import (
 from profe.core.evaluator import Tarea
 from profe.core.helpers import _fmt
 from profe.core.seed import extraer_nc, generar_semilla, obtener_rng
-from profe.core.solvers import ES_DEFECTO, MAX_ITER, iteraciones, resolver
+from profe.core.solvers import ES_DEFECTO, MAX_ITER, horner, iteraciones, resolver
+
+# Copia de la implementación de referencia del motor, guardada AQUÍ al cargar
+# el motor: así los laboratorios siguen usando la del motor aunque el alumno
+# redefina `horner` en su celda de práctica (en el bundle de Colab todo comparte
+# un mismo espacio de nombres, así que el nombre `horner` sí se sobrescribe).
+_HORNER_MOTOR = horner
+
+
+def horner_referencia(a, x0):
+    """
+    La forma anidada DEL MOTOR: la misma implementación que califica la
+    pregunta 2. La usan los laboratorios para no depender de lo que el alumno
+    haya escrito (o no) en su celda de práctica.
+    """
+    return _HORNER_MOTOR(a, x0)
 
 # ---------------------------------------------------------------------
 #  Estado del cuaderno
@@ -789,6 +804,114 @@ def raices_de(a):
     return np.roots([float(c) for c in a])
 
 
+# ---------------------------------------------------------------------
+#  Utilidades de los LABORATORIOS
+#
+#  Sirven para comparar la evaluación término a término con la forma
+#  anidada EN IGUALDAD DE CONDICIONES: las dos en Python puro, escalares y
+#  sin bibliotecas compiladas (comparar contra `numpy`, que está escrita en
+#  C y vectoriza, mediría la diferencia de lenguajes, no de algoritmos).
+#
+#  Además miden el error contra el valor EXACTO, que se calcula con
+#  aritmética racional, así que la diferencia que se ve es SOLO la del
+#  redondeo de cada método.
+# ---------------------------------------------------------------------
+def evaluar_ingenuo(a, x):
+    """
+    Evalúa P(x) TÉRMINO A TÉRMINO y cuenta las multiplicaciones.
+
+    Devuelve `(valor, n_multiplicaciones)`. Las multiplicaciones se cuentan
+    de verdad, no con la fórmula: calcular `x**(n-i)` cuesta `n-i`.
+    """
+    n = builtins.len(a) - 1
+    total, mult = 0.0, 0
+    for i, c in enumerate(a):
+        total += c * x ** (n - i)
+        mult += (n - i)
+    return total, mult
+
+
+def evaluar_horner(a, x):
+    """
+    Forma anidada MÍNIMA: solo el valor, y cuenta las multiplicaciones.
+
+    Existe para poder comparar el costo de los dos recorridos con EXACTAMENTE
+    el mismo trabajo. `horner_referencia` calcula lo mismo y ADEMÁS construye
+    el cociente Q (devuelve una lista), así que cronometrarla metería en la
+    cuenta ese trabajo extra y la comparación dejaría de ser justa.
+    """
+    b = float(a[0])
+    mult = 0
+    for c in a[1:]:
+        b = b * x + c
+        mult += 1
+    return b, mult
+
+
+def evaluar_exacto(a, x):
+    """
+    P(x) con aritmética RACIONAL EXACTA (`fractions.Fraction`).
+
+    Es la referencia contra la que se mide el error: las fracciones no
+    redondean nada, y `x` se toma tal cual (el MISMO float que usan los dos
+    métodos), así que la diferencia es solo la del algoritmo.
+
+    Aquí sí se puede recorrer el polinomio en forma anidada: con aritmética
+    exacta da lo mismo que término a término (no hay redondeo que reordenar),
+    y así el cálculo es rápido.
+    """
+    from fractions import Fraction
+
+    xr = x if isinstance(x, Fraction) else Fraction(x)
+    total = Fraction(0)
+    for c in a:
+        coef = c if isinstance(c, Fraction) else Fraction(c)
+        total = total * xr + coef
+    return total
+
+
+def error_relativo(aprox, exacto):
+    """|aprox - exacto| / |exacto| (inf si el valor exacto es cero)."""
+    try:
+        referencia = builtins.abs(float(exacto))
+        if referencia == 0.0:
+            return float('inf')
+        return builtins.abs(float(aprox) - float(exacto)) / referencia
+    except (TypeError, ValueError, OverflowError):
+        return float('nan')
+
+
+def coeficientes_binomio(n):
+    """
+    Coeficientes de (x - 1)^n, de mayor a menor grado.
+
+    Los usa el laboratorio del error: los términos son GRANDES y alternan de
+    signo mientras el resultado es diminuto, así que la evaluación término a
+    término pierde todos los dígitos por cancelación.
+    """
+    from math import comb
+
+    return [((-1) ** i) * comb(n, i) for i in range(n + 1)]
+
+
+def condicion_evaluacion(a, x):
+    """
+    Número de condición de evaluar P en x:  κ = Σ|aᵢ x^(n-i)| / |P(x)|.
+
+    Mide CUÁNTOS dígitos puede perder la evaluación: el error relativo del
+    resultado es del orden de κ·ε (con ε ≈ 1.1e-16). Si κ ≈ 1e24 se pierden 24
+    dígitos, y eso le pasa a CUALQUIER forma de evaluar: no es culpa del
+    algoritmo, es la condición del problema.
+    """
+    n = builtins.len(a) - 1
+    suma = builtins.sum(builtins.abs(c) * builtins.abs(x) ** (n - i)
+                        for i, c in enumerate(a))
+    valor = builtins.abs(float(evaluar_exacto(a, x)))
+    if valor == 0.0:
+        return float('inf')
+    return suma / valor
+
+
 def semilla_de(alumno_id):
     """Semilla entera del alumno (útil para reproducir su tarea)."""
     cfg, _ = obtener_configuracion()
@@ -798,9 +921,12 @@ def semilla_de(alumno_id):
 
 __all__ = [
     'CASOS_PRUEBA', 'COLUMNAS_DADAS', 'COLUMNAS_EXPL', 'ENCABEZADOS',
-    'ORDEN_COLUMNAS', 'calificar', 'comparar_practica', 'enviar',
-    'generar_examen', 'generar_tarea', 'hoja_manual', 'iteraciones',
-    'mano_comprueba', 'mano_ecuacion', 'mano_enunciado', 'mano_referencia',
+    'ORDEN_COLUMNAS', 'calificar', 'coeficientes_binomio', 'comparar_practica',
+    'condicion_evaluacion', 'enviar', 'error_relativo', 'evaluar_exacto',
+    'evaluar_horner', 'evaluar_ingenuo',
+    'generar_examen', 'generar_tarea', 'hoja_manual', 'horner_referencia',
+    'iteraciones', 'mano_comprueba', 'mano_ecuacion',
+    'mano_enunciado', 'mano_referencia',
     'mano_solucion', 'pregunta', 'raices_de', 'resolver', 'semilla_de',
     'tabla', 'tabla_df', 'tabla_en_blanco'
 ]

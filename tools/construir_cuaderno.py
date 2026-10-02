@@ -317,83 +317,181 @@ $$P(x) = \bigl(\dots\bigl((a_n x + a_{n-1})x + a_{n-2}\bigr)x + \dots\bigr)x + a
 y ahora **cada paso reutiliza el resultado del anterior**. Eso baja el costo a
 exactamente $n$ multiplicaciones y $n$ sumas: $O(n)$.
 
-| Grado $n$ | Término a término | Horner | Ahorro |
-|---|---|---|---|
-| 2 | 3 | 2 | 1 |
-| 4 | 10 | 4 | 6 |
-| 8 | 36 | 8 | 28 |
-| 20 | 210 | 20 | 190 |
+---
 
 > **Además hay una ganancia numérica.** Al calcular $x^{20}$ y multiplicarlo por
 > un coeficiente, el error de redondeo de las potencias intermedias se arrastra
 > y se amplifica. En la forma anidada solo se hace una multiplicación y una suma
-> por coeficiente, así que el error crece mucho menos.
+> por coeficiente, así que el error crece mucho menos. **En el segundo
+> laboratorio lo vas a ver con números, no con palabras.**
 
-### Veámoslo funcionar
+---
 
-El laboratorio de abajo **cuenta las multiplicaciones** de verdad (no las
-estima) y compara con el tiempo de cómputo.
+### 🧪 Laboratorio A · ¿Cuántas multiplicaciones ahorra Horner?
+
+El laboratorio de abajo **cuenta las multiplicaciones reales** y compara el tiempo de ejecución entre la implementación directa y la anidada.
+
+**Las dos se miden en igualdad de condiciones:** Python puro, escalar, el mismo
+número de repeticiones y sin bibliotecas compiladas. Comparar contra `numpy`
+(que está escrita en C y procesa vectores completos) mediría la diferencia de
+lenguajes, no la del algoritmo.
+
+#### Glosario
+
+> **Algoritmo «ingenuo» (*Naive algorithm*):** En computación y ciencias de la computación, el término *ingenuo* o del francés *naïve* se refiere al enfoque directo o literal de resolver un problema matemático tal como está definido en papel, sin aplicar optimizaciones algorítmicas ni considerar el consumo de recursos computacionales.
+
+> **Regla de Horner:** Llamado así en honor al matemático británico William George Horner (aunque conocido siglos antes por matemáticos en China e India), es el algoritmo estándar para reducir la evaluación de un polinomio a una secuencia anidada de $n$ multiplicaciones y $n$ sumas.
 """)
 
 py(r"""
-#@title 🧪 Laboratorio · ¿cuántas multiplicaciones ahorra Horner?
-# Conteo REAL de multiplicaciones: la forma ingenua calcula todas las potencias,
-# la anidada reutiliza el resultado anterior.
-
-def P_ingenuo(a, x):
-    '''Término a término. Devuelve (valor, nº de multiplicaciones).'''
-    n = len(a) - 1
-    total, mult = 0.0, 0
-    for i, c in enumerate(a):
-        total += c * x ** (n - i)
-        mult += (n - i)          # calcular x**(n-i) cuesta n-i multiplicaciones
-    return total, mult
-
-
-def P_horner(a, x):
-    '''Forma anidada. Devuelve (valor, nº de multiplicaciones).'''
-    b, mult = float(a[0]), 0
-    for c in a[1:]:
-        b = b * x + c
-        mult += 1
-    return b, mult
-
-
-print("%-6s %-14s %-10s %-14s %-10s %s"
-      % ("grado", "ingenuo", "mult", "Horner", "mult", "¿iguales?"))
-print("-" * 68)
-for n in (2, 4, 6, 8, 10, 12):
-    a = [1.0] * (n + 1)
-    v1, m1 = P_ingenuo(a, 1.5)
-    v2, m2 = P_horner(a, 1.5)
-    print("%-6d %-14.10f %-10d %-14.10f %-10d %s"
-          % (n, v1, m1, v2, m2, "sí" if abs(v1 - v2) < 1e-9 else "NO"))
-
-print("\nMismo resultado, menos operaciones: eso es todo el truco.")
-print("La cuenta del ahorro es n*(n+1)/2 comparado con n.")
-
-# --- Y con numpy, que es lo que usan los ingenieros -------------------
+# @title 🧪 Laboratorio A · Ahorro de operaciones y tiempo (mismas condiciones)
+#
+# Los dos métodos se comparan EN IGUALDAD DE CONDICIONES:
+#   * Python puro y escalar, los dos igual. Comparar contra numpy (C +
+#     vectorizado) mediría la diferencia de lenguajes, no la del algoritmo.
+#   * `horner_referencia` es la MISMA función del motor que califica la
+#     pregunta 2, no una copia escrita aquí.
+#   * la evaluación término a término sale del motor (`evaluar_ingenuo`),
+#     que además CUENTA las multiplicaciones de verdad, una por una.
 import time
+from IPython.display import Markdown, display
 
-n = 200
-a = [1.0] * (n + 1)
-x = 1.0001
+encabezados = ("| Grado ($n$) | Mult. término a término | Mult. Horner | Ahorro | "
+               "Tiempo ingenuo (µs) | Tiempo Horner (µs) | ¿Mismo valor? |\n")
+separador = "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|\n"
+filas = ""
 
-t0 = time.perf_counter()
-for _ in range(20000):
-    P_ingenuo(a, x)
-t1 = time.perf_counter()
+for n in (2, 4, 6, 8, 10, 12, 20, 50, 100, 200):
+    a = [1.0] * (n + 1)
+    x = 1.5
 
-t2 = time.perf_counter()
-for _ in range(20000):
-    np.polyval(a, x)
-t3 = time.perf_counter()
+    v_ing, mult_ing = evaluar_ingenuo(a, x)
+    v_hor = horner_referencia(a, x)[0]      # forma anidada del motor
+    mult_hor = n                            # una multiplicación por coeficiente
 
-print("\nGrado %d, 20 000 evaluaciones (solo para ver la diferencia):" % n)
-print("   término a término : %.3f s" % (t1 - t0))
-print("   numpy.polyval    : %.3f s   <- usa Horner por dentro" % (t3 - t2))
-print("\nOjo: numpy.polyval hace lo mismo, pero TÚ tienes que programar el")
-print("algoritmo, así que en la pregunta 2 no te sirve usarla.")
+    # Las mismas repeticiones para los dos, y suficientes para que el
+    # cronómetro mida algo (se divide entre ellas para dar μs por evaluación).
+    reps = max(5, 200000 // max(1, mult_ing))
+    t0 = time.perf_counter()
+    for _ in range(reps):
+        evaluar_ingenuo(a, x)
+    t1 = time.perf_counter()
+    t2 = time.perf_counter()
+    for _ in range(reps):
+        horner_referencia(a, x)
+    t3 = time.perf_counter()
+
+    us_ing = (t1 - t0) / reps * 1e6
+    us_hor = (t3 - t2) / reps * 1e6
+    iguales = "sí" if abs(v_ing - v_hor) <= 1e-12 * max(1.0, abs(v_ing)) else "⚠️ no"
+
+    filas += ("| $%d$ | $%d$ | $%d$ | **$%d$** | %.1f | %.1f | %s |\n"
+              % (n, mult_ing, mult_hor, mult_ing - mult_hor, us_ing, us_hor, iguales))
+
+display(Markdown(
+    "### 📊 Costo y tiempo (mismo lenguaje, misma máquina, mismas repeticiones)\n\n"
+    + encabezados + separador + filas
+    + "\n> **Multiplicaciones:** término a término $\\frac{n(n+1)}{2}$, Horner $n$.\n"
+      "> El ahorro es $\\frac{n(n+1)}{2}-n=\\frac{n(n-1)}{2}$, que sigue siendo\n"
+      "> $O(n^2)$ **de operaciones que te ahorras**; el costo de Horner es $O(n)$.\n"
+      "> Con $n=200$: 20 100 operaciones contra 200.\n"
+      "> Si en vez de calcular cada potencia desde cero las guardaras en un\n"
+      "> arreglo ($x^2=x\\cdot x$, $x^3=x^2\\cdot x$, ...), el ingenuo bajaría a\n"
+      "> $2n$ multiplicaciones, pero necesitaría guardar $n$ valores y seguiría\n"
+      "> costando el doble que Horner.\n"
+      ">\n"
+      "> **Tiempo:** las dos columnas son del MISMO número de repeticiones en\n"
+      "> Python puro. El conteo le añade unas sumas al método ingenuo, así que si\n"
+      "> acaso lo perjudica: la diferencia real es igual o mayor.\n"
+      ">\n"
+      "> **¿Y numpy?** Aquí no se compara contra `numpy.polyval` a propósito: esa\n"
+      "> función está escrita en C y procesa vectores completos, así que ganaría\n"
+      "> por lenguaje, no por algoritmo. Dos implementaciones se comparan\n"
+      "> cambiando una sola cosa: la forma de recorrer los coeficientes.\n"
+      ">\n"
+      "> **¿Mismo valor?** Con coeficientes positivos los dos aciertan. La\n"
+      "> diferencia numérica aparece cuando hay **cancelación**, y eso lo mide el\n"
+      "> laboratorio B."))
+""")
+
+md(r"""
+### 🧪 Laboratorio B · Error de redondeo: los dígitos que no se ven
+
+Todos los valores de abajo salen con **17 cifras** (todas las que guarda un
+`float` de doble precisión) y el valor «verdadero» se calcula con **aritmética
+racional exacta** (`Fraction`). Así el error que se mide es *solo* el del redondeo
+del método: no hay una tercera fuente de error.
+
+Se hace en tres pasos:
+
+1. **Los últimos dígitos a la vista.** El mismo polinomio evaluado de las dos
+   formas, con todas sus cifras, contra el valor exacto.
+2. **Una evaluación mal condicionada.** Con $(x-1)^n$ desarrollado, en $x=1.0001$,
+   los términos valen hasta $10^{17}$ y el resultado es $10^{-4n}$: al restar se
+   cancelan y se llevan los dígitos. Se mide $\kappa$, el **número de condición**,
+   que *predice* cuántos dígitos se pierden, y se comprueba que la predicción
+   acierta. Ahí toca preguntarse de quién es la culpa.
+3. **Un polinomio grande «normal»** (coeficientes positivos, sin cancelación):
+   los dos aciertan y la única diferencia real vuelve a ser el costo.
+""")
+
+py(r"""
+# @title 🧪 Laboratorio B · Error de redondeo: los dígitos que no se ven
+#
+# El valor "verdadero" es EXACTO (aritmética racional), y se evalúa en el MISMO
+# float `x` para los dos métodos, así que la diferencia que se ve es
+# exclusivamente la del redondeo de cada uno.
+
+x = 1 + 1e-4
+print("Polinomio: P(x) = (x - 1)^n  desarrollado (coeficientes que alternan de signo)")
+print("Punto:     x = %.20g   <-- el MISMO para los dos métodos\n" % x)
+print("%-5s %-25s %-11s %-25s %-11s"
+      % ("n", "término a término", "error rel.", "Horner", "error rel."))
+print("-" * 84)
+for n in (2, 4, 6, 8, 12, 20, 40, 60):
+    a = coeficientes_binomio(n)          # (x - 1)^n, de mayor a menor grado
+    exacto = evaluar_exacto(a, x)
+    v_ing, _ = evaluar_ingenuo(a, x)
+    v_hor = horner_referencia(a, x)[0]
+    print("%-5d %-25.17g %-11.2e %-25.17g %-11.2e"
+          % (n, v_ing, error_relativo(v_ing, exacto),
+             v_hor, error_relativo(v_hor, exacto)))
+print("-" * 84)
+
+print("\nEl valor exacto vale 1e-4 elevado a n, o sea:")
+for n in (2, 6, 12, 20):
+    print("   (x - 1)^%-3d = %s" % (n, evaluar_exacto(coeficientes_binomio(n), x)))
+
+print("\nLee las columnas: con n = 8 el resultado verdadero ya es del orden de")
+print("1e-32, pero los términos que suma el método ingenuo son del orden de 1e2.")
+print("Restar números así de parecidos se come TODOS los dígitos disponibles:")
+print("lo que queda es ruido. La forma anidada nunca construye esos términos")
+print("grandes: calcula (x - 1) una vez y lo multiplica; por eso conserva los")
+print("dígitos incluso cuando el resultado es diminuto.")
+
+# --- ¿Y con un polinomio grande "normal"? -----------------------------
+print("\n" + "=" * 84)
+print("Polinomio grande con coeficientes POSITIVOS (sin cancelación):")
+print("=" * 84)
+print("%-6s %-25s %-11s %-25s %-11s"
+      % ("grado", "término a término", "error rel.", "Horner", "error rel."))
+print("-" * 84)
+for n in (50, 100, 200, 400):
+    a = [1.0] * (n + 1)
+    xg = 1.5
+    exacto = evaluar_exacto(a, xg)
+    v_ing, mult = evaluar_ingenuo(a, xg)
+    v_hor = horner_referencia(a, xg)[0]
+    print("%-6d %-25.17g %-11.2e %-25.17g %-11.2e"
+          % (n, v_ing, error_relativo(v_ing, exacto), v_hor,
+             error_relativo(v_hor, exacto)))
+print("-" * 84)
+print("Aquí los dos métodos aciertan (el error es del orden del épsilon de la")
+print("máquina, ~1e-16) porque todos los términos tienen el MISMO signo y se")
+print("suman sin cancelarse. La ventaja de Horner en este caso es solo de costo:")
+print("el ingenuo hizo %d multiplicaciones (y el mismo número de sumas) donde"
+      % evaluar_ingenuo([1.0] * 201, 1.5)[1])
+print("Horner habría hecho 200.")
 """)
 
 # =====================================================================
