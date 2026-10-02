@@ -198,7 +198,14 @@ def tabla_df(metodo, ej, filas_n=None):
 
 
 def tabla(metodo, ej, filas_n=None):
-    """Muestra la tabla de referencia (la solución de la división sintética)."""
+    """
+    Muestra la tabla de referencia (la solución de la división sintética).
+
+    Solo MUESTRA: no devuelve nada. Si devolviera el DataFrame (o la lista de
+    diccionarios, cuando no hay pandas) una celda que terminara aquí lo
+    imprimiría ADEMÁS como resultado, en texto plano. Los datos se piden con
+    `tabla_df`.
+    """
     datos = _filas_tabla(metodo, ej, filas_n)
     df = tabla_df(metodo, ej, filas_n)
     if df is not None and not isinstance(df, list):
@@ -207,7 +214,7 @@ def tabla(metodo, ej, filas_n=None):
     else:
         print('Tabla de la división sintética (referencia)')
         print(_texto_tabla(datos, ORDEN_COLUMNAS[metodo]))
-    return df
+    return None
 
 
 # =====================================================================

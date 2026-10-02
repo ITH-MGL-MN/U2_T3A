@@ -15,6 +15,15 @@ El cuaderno del curso la carga solo, en la celda de configuración
 (`from visualizar import ...`), así que basta con llamarlas. No dependen del
 motor: si copias este archivo a otro cuaderno, las cuatro funciones siguen
 funcionando igual (necesitan numpy, y matplotlib solo para las gráficas).
+
+Las cuatro siguen la misma regla, y es a propósito:
+
+    mostrar=True  (por omisión)   saca la tabla o la figura y no devuelve nada
+    mostrar=False                 no saca nada y devuelve el texto o la figura
+
+Así una celda que termina en `tabla_experimento(...)` muestra SOLO la tabla. Si
+la función devolviera el texto, el cuaderno lo imprimiría ADEMÁS como resultado
+de la celda, en texto plano y con sus `|` y sus `\\n` a la vista.
 """
 import numpy as np
 
@@ -107,9 +116,9 @@ def _formateador_columna(formato):
         "'num<N>', un molde con '%%' o una función." % (formato,))
 
 
-def tabla_experimento(columnas, filas, titulo=None, pie=None):
+def tabla_experimento(columnas, filas, titulo=None, pie=None, mostrar=True):
     """
-    Imprime una tabla de laboratorio y devuelve su texto en Markdown.
+    Imprime una tabla de laboratorio.
 
     Escribe los '|' y la fila de alineación por ti, que es donde se cometen los
     errores que no avisan: si esa fila no tiene el mismo número de columnas que
@@ -130,6 +139,13 @@ def tabla_experimento(columnas, filas, titulo=None, pie=None):
                fila de referencia que no tiene error que medir.
     titulo   : markdown que va ENCIMA de la tabla (opcional).
     pie      : markdown que va DEBAJO de la tabla (opcional).
+    mostrar  : True (por omisión) imprime la tabla y no devuelve nada; con False
+               no imprime y devuelve el texto de Markdown (para pegarla en otro
+               sitio, o para comprobarla desde una prueba).
+
+    Devuelve
+    --------
+    None si la imprimió, o el texto de Markdown si pediste `mostrar=False`.
 
     Ejemplo
     -------
@@ -177,7 +193,9 @@ def tabla_experimento(columnas, filas, titulo=None, pie=None):
         lineas.append('| ' + ' | '.join(celdas) + ' |')
 
     texto = '\n\n'.join(p for p in (titulo, '\n'.join(lineas), pie) if p)
-    _display(_markdown(texto))
+    if mostrar:
+        _display(_markdown(texto))
+        return None
     return texto
 
 
@@ -223,10 +241,12 @@ def graficar_polinomio(a, x0=None, raices=None, rango=None, titulo=None,
     raices : iterable de raíces; se marcan sobre el eje las que son reales
     rango  : (x_min, x_max); si no se da, se deduce de x0 y de las raíces
     titulo : título de la gráfica
-    mostrar: con False solo construye la figura, sin dibujarla (para combinarla
-             con otras gráficas)
+    mostrar: True (por omisión) la dibuja y no devuelve nada; con False no la
+             dibuja y devuelve la figura (para combinarla con otras gráficas)
 
-    Devuelve la figura de matplotlib.
+    Devuelve
+    --------
+    None si la dibujó, o la figura de matplotlib si pediste `mostrar=False`.
     """
     if not a:
         raise ValueError('El polinomio necesita al menos un coeficiente.')
@@ -285,6 +305,7 @@ def graficar_polinomio(a, x0=None, raices=None, rango=None, titulo=None,
     fig.tight_layout()
     if mostrar:
         plt.show()
+        return None
     return fig
 
 
@@ -298,13 +319,16 @@ def graficar_errores(x, series, etiqueta_x='$n$', etiqueta_y='error relativo',
     x      : valores del eje horizontal, uno por medición
     series : diccionario nombre -> lista de errores, o lista de pares
              (nombre, lista). Todas las listas miden lo mismo que x.
-    mostrar: con False solo construye la figura, sin dibujarla
+    mostrar: True (por omisión) la dibuja y no devuelve nada; con False no la
+             dibuja y devuelve la figura
 
     Ojo con la escala logarítmica: un error de CERO no se puede dibujar (no hay
     logaritmo de cero), así que esos puntos se quedan fuera de la curva. Si te
-    interesan, dibuja con `escala_log=False` o mirá los en la tabla.
+    interesan, dibuja con `escala_log=False` o míralos en la tabla.
 
-    Devuelve la figura de matplotlib.
+    Devuelve
+    --------
+    None si la dibujó, o la figura de matplotlib si pediste `mostrar=False`.
     """
     plt = _plt()
     if isinstance(series, dict):
@@ -329,4 +353,5 @@ def graficar_errores(x, series, etiqueta_x='$n$', etiqueta_y='error relativo',
     fig.tight_layout()
     if mostrar:
         plt.show()
+        return None
     return fig

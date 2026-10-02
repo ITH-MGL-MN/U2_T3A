@@ -24,6 +24,17 @@ import json
 import os
 import re
 import sys
+import warnings
+
+# El cuaderno dibuja gráficas en sus laboratorios y al verificar no queremos que
+# se abra una ventana (ni que `plt.show()` se quede esperando). Se fuerza un
+# backend sin pantalla ANTES de que el cuaderno importe matplotlib; en el
+# cuaderno normal no afecta, porque ahí manda el `%matplotlib inline` de la 1.
+os.environ.setdefault('MPLBACKEND', 'Agg')
+# Con un backend sin pantalla, `plt.show()` avisa de que no puede mostrar nada.
+# Al verificar eso es lo esperado, no un problema del cuaderno: se silencia solo
+# ese aviso, para que no ensucie el resultado de las comprobaciones.
+warnings.filterwarnings('ignore', message='FigureCanvasAgg is non-interactive')
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if RAIZ not in sys.path:
