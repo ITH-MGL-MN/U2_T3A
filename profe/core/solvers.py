@@ -13,8 +13,6 @@ Ninguno de los dos itera: son algoritmos directos. Aun así `iteraciones()`
 devuelve la "tabla del método" (una fila por coeficiente, como en los métodos
 iterativos) porque es lo que imprimen el cuaderno y los verificadores.
 """
-import builtins
-
 import numpy as np
 
 MAX_ITER = 60
@@ -32,7 +30,7 @@ def _division_sintetica(a, x0):
     `b[0] = b_n` ... `b[n] = b_0`. El valor del polinomio es `b[n]` y los
     coeficientes de `b[0..n-1]` son el cociente de dividir entre (x - x0).
     """
-    n = builtins.len(a) - 1
+    n = len(a) - 1
     b = [0.0] * (n + 1)
     b[0] = a[0]
     for k in range(1, n + 1):
@@ -47,7 +45,7 @@ def _division_sintetica_2(b, x0):
     El resultados es `P'(x0) = c_1`. En el orden de la lista eso es
     `c[n-1]` (y por eso el último hueco queda en None).
     """
-    n = builtins.len(b) - 1
+    n = len(b) - 1
     c = [None] * (n + 1)
     if n == 0:
         return c
@@ -66,7 +64,7 @@ def horner(a, x0):
     que aquí queda como referencia de lo que debe devolver.
     """
     b = _division_sintetica(a, x0)
-    n = builtins.len(a) - 1
+    n = len(a) - 1
     c = _division_sintetica_2(b, x0)
     p_val = b[n]
     dp_val = c[n - 1] if n >= 1 else 0.0
@@ -82,13 +80,13 @@ def deflactar(a, r):
     comete al suponerla.
     """
     b = _division_sintetica(a, r)
-    n = builtins.len(a) - 1
+    n = len(a) - 1
     return list(b[:-1]), b[n]
 
 
 def evaluar(a, x):
     """P(x) término a término (la forma "ingenua", para comparar)."""
-    n = builtins.len(a) - 1
+    n = len(a) - 1
     total = 0.0
     for i, c in enumerate(a):
         total += c * x ** (n - i)
@@ -111,7 +109,7 @@ def iteraciones(metodo, ej, es=None, max_iter=MAX_ITER):
     if not a or x0 is None:
         return False, filas
 
-    n = builtins.len(a) - 1
+    n = len(a) - 1
 
     if metodo == 'HORNER':
         b = _division_sintetica(a, x0)
@@ -145,7 +143,7 @@ def iteracion_objetivo(filas, es):
     primera iteración con ea <= es). Aquí no aplica: la tabla es una división
     sintética, así que su "objetivo" es la última fila.
     """
-    return builtins.len(filas) if filas else None
+    return len(filas) if filas else None
 
 
 def resolver(metodo, ej, es=None):

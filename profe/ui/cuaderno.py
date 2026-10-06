@@ -18,7 +18,6 @@ cambian cuando se reordena el código por dentro.
 Los mensajes al alumno se imprimen aquí (es la capa de presentación); el
 motor de `profe.core` solo devuelve datos.
 """
-import builtins
 import inspect
 import json
 
@@ -36,22 +35,20 @@ from profe.core import (
 from profe.core.evaluator import Tarea
 from profe.core.helpers import _fmt
 from profe.core.seed import extraer_nc, generar_semilla, obtener_rng
-from profe.core.solvers import ES_DEFECTO, MAX_ITER, horner, iteraciones, resolver
-
-# Copia de la implementación de referencia del motor, guardada AQUÍ al cargar
-# el motor: así los laboratorios siguen usando la del motor aunque el alumno
-# redefina `horner` en su celda de práctica (en el bundle de Colab todo comparte
-# un mismo espacio de nombres, así que el nombre `horner` sí se sobrescribe).
-_HORNER_MOTOR = horner
-
+from profe.core.solvers import (ES_DEFECTO, MAX_ITER, deflactar, horner,
+                                iteraciones, resolver)
 
 def horner_referencia(a, x0):
     """
     La forma anidada DEL MOTOR: la misma implementación que califica la
     pregunta 2. La usan los laboratorios para no depender de lo que el alumno
     haya escrito (o no) en su celda de práctica.
+
+    No hace falta blindar el nombre contra el `horner` del alumno: el motor se
+    carga en su PROPIO namespace (celda 1 del cuaderno) y el cuaderno solo ve
+    los nombres de `__all__`, así que aquel `horner` no llega hasta aquí.
     """
-    return _HORNER_MOTOR(a, x0)
+    return horner(a, x0)
 
 # ---------------------------------------------------------------------
 #  Estado del cuaderno
@@ -232,8 +229,8 @@ def generar_tarea(alumno_id):
     _EXAMEN = Tarea(alumno_id)
     _display(_markdown('Esta tarea tiene **%d** preguntas automáticas (%g puntos) y **%d** '
                        'actividades a mano que revisa tu profesor (%g%% de la calificación).'
-                       % (builtins.len(_EXAMEN.preguntas), _EXAMEN.maximo,
-                          builtins.len(METODOS_MANO),
+                       % (len(_EXAMEN.preguntas), _EXAMEN.maximo,
+                          len(METODOS_MANO),
                           100.0 * _EXAMEN.peso_mano)))
     return _EXAMEN
 
@@ -323,8 +320,8 @@ def pregunta(numero):
     marco = inspect.currentframe().f_back
     ex = _obtener_examen(marco=marco)
     i = int(numero)
-    if not 1 <= i <= builtins.len(ex.preguntas):
-        raise ValueError('Esta tarea tiene %d preguntas.' % builtins.len(ex.preguntas))
+    if not 1 <= i <= len(ex.preguntas):
+        raise ValueError('Esta tarea tiene %d preguntas.' % len(ex.preguntas))
     p = ex.preguntas[i - 1]
     _render_pregunta(i, p, peso=ex.pesos[i - 1], total=ex.maximo)
     _crear_widget_respuesta(i, p, marco)
@@ -349,7 +346,7 @@ def _leer_valor(marco, i):
 def _respuestas_del_cuaderno(marco):
     ex = _EXAMEN
     res = {}
-    for i in range(1, builtins.len(ex.preguntas) + 1):
+    for i in range(1, len(ex.preguntas) + 1):
         if ex.preguntas[i - 1]['tipo'] == 'funcion':
             continue
         res[i] = _leer_valor(marco, i)
@@ -390,7 +387,7 @@ def comparar_practica(metodo, ej, resultado):
     nombre = NOMBRE_FUNCION.get(metodo, metodo)
     try:
         if (not isinstance(resultado, (tuple, list, np.ndarray))
-                or builtins.len(resultado) != 3):
+                or len(resultado) != 3):
             raise TypeError
         p_val, dp_val, Q = resultado
         Q = list(Q)
@@ -406,15 +403,15 @@ def comparar_practica(metodo, ej, resultado):
     if not ej.get('_conv'):
         print('⚠️ Este ejercicio no tiene tabla de referencia.')
 
-    ok_p = builtins.abs(_num_o_none(p_val) - ej['p_val']) <= \
-        TOL_PRACTICA * builtins.max(1.0, builtins.abs(ej['p_val'])) \
+    ok_p = abs(_num_o_none(p_val) - ej['p_val']) <= \
+        TOL_PRACTICA * max(1.0, abs(ej['p_val'])) \
         if _num_o_none(p_val) is not None else False
-    ok_d = builtins.abs(_num_o_none(dp_val) - ej['dp_val']) <= \
-        TOL_PRACTICA * builtins.max(1.0, builtins.abs(ej['dp_val'])) \
+    ok_d = abs(_num_o_none(dp_val) - ej['dp_val']) <= \
+        TOL_PRACTICA * max(1.0, abs(ej['dp_val'])) \
         if _num_o_none(dp_val) is not None else False
-    ok_q = (builtins.len(Q) == builtins.len(ej['Q'])
-            and builtins.all(builtins.abs(a - b) <=
-                             TOL_PRACTICA * builtins.max(1.0, builtins.abs(b))
+    ok_q = (len(Q) == len(ej['Q'])
+            and all(abs(a - b) <=
+                             TOL_PRACTICA * max(1.0, abs(b))
                              for a, b in zip(Q, ej['Q'])))
 
     if ok_p and ok_d and ok_q:
@@ -429,14 +426,14 @@ def comparar_practica(metodo, ej, resultado):
               '**b_k** (los que acabas de obtener), no sobre los a_k. El resultado '
               'es el PENÚLTIMO valor de esa segunda fila.')
     if not ok_q:
-        if builtins.len(Q) == builtins.len(ej['Q']):
+        if len(Q) == len(ej['Q']):
             print('\u274c Q no coincide: son los b_k SIN el último (ese último es '
                   'P(x_0)). Cuidado si el polinomio no es mónico: Q conserva el '
                   'coeficiente líder.')
         else:
             print('\u274c Q tiene %d coeficientes y debe tener %d (grado %d): '
                   'esa lista NO incluye el residuo.'
-                  % (builtins.len(Q), builtins.len(ej['Q']), builtins.len(ej['Q']) - 1))
+                  % (len(Q), len(ej['Q']), len(ej['Q']) - 1))
     cmd, valor = CASOS_PRUEBA.get(metodo, ('', ''))
     if cmd:
         print('   Compruébala con un caso que ya conoces:')
@@ -452,7 +449,7 @@ def _mostrar_resultados(filas):
     for fila in filas:
         val = fila['val']
         if isinstance(val, (tuple, list)) and val and isinstance(val[0], tuple):
-            val = 'programa (%d casos)' % builtins.len(val)
+            val = 'programa (%d casos)' % len(val)
         elif isinstance(val, list):
             val = _lista_txt(val)
         print('%-4d %-12s %-11s %s' % (fila['i'], iconos[fila['estado']],
@@ -590,7 +587,7 @@ def consultar_calificacion():
 
     usados = int(res.get('intento') or 0)
     total = res.get('total')
-    restantes = builtins.max(0, ex.max_intentos - usados)
+    restantes = max(0, ex.max_intentos - usados)
     print('NC %s  ·  %s' % (res.get('NC', ex.nc), res.get('tarea', ex.id_tarea)))
     print('   Intentos usados : %d de %d' % (usados, ex.max_intentos))
     print('   Te quedan       : %d' % restantes)
@@ -721,25 +718,25 @@ def mano_comprueba(metodo, valores):
     print('Tus valores reportados: %s'
           % ', '.join('%s = %.8g' % (etq, v) for (etq, _r), v in zip(ref, vals)))
 
-    todo, faltan = True, builtins.len(ref) - builtins.len(vals)
+    todo, faltan = True, len(ref) - len(vals)
     print('')
     print('   %-10s %-16s %-16s %s' % ('valor', 'tu resultado', 'referencia', 'estado'))
     print('   ' + '-' * 58)
     for (etq, r), v in zip(ref, vals):
-        err = builtins.abs(v - r) / builtins.max(builtins.abs(r), 1e-12)
+        err = abs(v - r) / max(abs(r), 1e-12)
         bien = err <= TOL_MANO
         todo = todo and bien
         print('   %-10s %-16.8g %-16.8g %s (error %.1e)'
               % (etq, v, r, '\u2705' if bien else '\u274c', err))
 
-    _MANO_RES[metodo] = bool(todo and builtins.len(vals) == builtins.len(ref))
+    _MANO_RES[metodo] = bool(todo and len(vals) == len(ref))
     print('')
     if _MANO_RES[metodo]:
         print('\u2705 Todos los valores son correctos.')
     else:
-        if builtins.len(vals) < builtins.len(ref):
+        if len(vals) < len(ref):
             print('\u26a0\ufe0f Reportaste %d valores y hacen falta %d: %s.'
-                  % (builtins.len(vals), builtins.len(ref), _reporte_txt(metodo)))
+                  % (len(vals), len(ref), _reporte_txt(metodo)))
         print('   Sugerencias: arrastra TODOS los decimales del paso anterior y no')
         print('   redondees a la mitad del cálculo.')
         if metodo == 'HORNER':
@@ -803,13 +800,13 @@ def mano_ecuacion(metodo, f=None, df=None):
         cand = float(cand)
         if not np.isfinite(cand):
             continue
-        if builtins.all(builtins.abs(cand - v) > 1e-6 * builtins.max(1.0, builtins.abs(v))
+        if all(abs(cand - v) > 1e-6 * max(1.0, abs(v))
                         for v in xs):
             xs.append(cand)
-        if builtins.len(xs) == 3:
+        if len(xs) == 3:
             break
 
-    print('Revisión de TU ecuación (en %d valores que no ves):' % builtins.len(xs))
+    print('Revisión de TU ecuación (en %d valores que no ves):' % len(xs))
     todo_ok, faltan, malas = True, [], []
     for nombre, fn_alumno in necesarias:
         fn_ref = referencia.get(nombre)
@@ -830,8 +827,8 @@ def mano_ecuacion(metodo, f=None, df=None):
                 break
             if not (np.isfinite(a) and np.isfinite(b)):
                 continue
-            peor = builtins.max(peor, builtins.abs(a - b) /
-                                builtins.max(1.0, builtins.abs(b)))
+            peor = max(peor, abs(a - b) /
+                                max(1.0, abs(b)))
         if falla:
             todo_ok = False
             malas.append(nombre)
@@ -924,7 +921,7 @@ def evaluar_ingenuo(a, x):
     Devuelve `(valor, n_multiplicaciones)`. Las multiplicaciones se cuentan
     de verdad, no con la fórmula: calcular `x**(n-i)` cuesta `n-i`.
     """
-    n = builtins.len(a) - 1
+    n = len(a) - 1
     total, mult = 0.0, 0
     for i, c in enumerate(a):
         total += c * x ** (n - i)
@@ -974,10 +971,10 @@ def evaluar_exacto(a, x):
 def error_relativo(aprox, exacto):
     """|aprox - exacto| / |exacto| (inf si el valor exacto es cero)."""
     try:
-        referencia = builtins.abs(float(exacto))
+        referencia = abs(float(exacto))
         if referencia == 0.0:
             return float('inf')
-        return builtins.abs(float(aprox) - float(exacto)) / referencia
+        return abs(float(aprox) - float(exacto)) / referencia
     except (TypeError, ValueError, OverflowError):
         return float('nan')
 
@@ -1004,10 +1001,10 @@ def condicion_evaluacion(a, x):
     dígitos, y eso le pasa a CUALQUIER forma de evaluar: no es culpa del
     algoritmo, es la condición del problema.
     """
-    n = builtins.len(a) - 1
-    suma = builtins.sum(builtins.abs(c) * builtins.abs(x) ** (n - i)
+    n = len(a) - 1
+    suma = sum(abs(c) * abs(x) ** (n - i)
                         for i, c in enumerate(a))
-    valor = builtins.abs(float(evaluar_exacto(a, x)))
+    valor = abs(float(evaluar_exacto(a, x)))
     if valor == 0.0:
         return float('inf')
     return suma / valor
@@ -1020,15 +1017,22 @@ def semilla_de(alumno_id):
     return generar_semilla(extraer_nc(alumno_id), id_tarea)
 
 
+# =====================================================================
+#  API DEL CUADERNO
+# ---------------------------------------------------------------------
+#  Estos son los ÚNICOS nombres que el cuaderno recibe del motor: la celda 1
+#  lo carga en un namespace aparte y copia al cuaderno lo que hay aquí. Si algo
+#  que el cuaderno necesita no está en esta lista, el cuaderno falla con un
+#  `KeyError` al arrancar (mejor eso que un fallo a mitad de la tarea).
+# =====================================================================
 __all__ = [
     'CASOS_PRUEBA', 'COLUMNAS_DADAS', 'COLUMNAS_EXPL', 'ENCABEZADOS',
     'ORDEN_COLUMNAS', 'calificar', 'coeficientes_binomio', 'comparar_practica',
-    'condicion_evaluacion', 'consultar_calificacion', 'enviar', 'error_relativo',
-    'evaluar_exacto',
-    'evaluar_horner', 'evaluar_ingenuo',
-    'generar_examen', 'generar_tarea', 'hoja_manual', 'horner_referencia',
-    'iteraciones', 'mano_comprueba', 'mano_ecuacion',
-    'mano_enunciado', 'mano_referencia',
-    'mano_solucion', 'pregunta', 'raices_de', 'resolver', 'semilla_de',
-    'tabla', 'tabla_df', 'tabla_en_blanco', 'ultimo_envio'
+    'condicion_evaluacion', 'consultar_calificacion', 'deflactar', 'enviar',
+    'error_relativo', 'evaluar_exacto', 'evaluar_horner', 'evaluar_ingenuo',
+    'extraer_nc', 'generar_examen', 'generar_tarea', 'hoja_manual',
+    'horner_referencia', 'iteraciones', 'mano_comprueba', 'mano_ecuacion',
+    'mano_enunciado', 'mano_referencia', 'mano_solucion', 'pregunta',
+    'raices_de', 'resolver', 'semilla_de', 'tabla', 'tabla_df',
+    'tabla_en_blanco', 'ultimo_envio'
 ]

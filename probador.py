@@ -9,7 +9,6 @@ probador.py — Herramienta local para inspeccionar un ejercicio por NC.
 Muestra el enunciado tal como lo ve el alumno y la tabla de referencia (la
 división sintética) que usa el motor para calificar.
 """
-import builtins
 import sys
 
 from profe.config import buscar, obtener_configuracion
@@ -66,6 +65,6 @@ def probar_ejercicio(nc=NC_POR_OMISION, metodo=METODO_POR_OMISION, mano=False):
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:]]
     nc = args[0] if args else NC_POR_OMISION
-    metodo = args[1].upper() if builtins.len(args) > 1 else METODO_POR_OMISION
-    mano = builtins.len(args) > 2 and args[2].lower().startswith('mano')
+    metodo = args[1].upper() if len(args) > 1 else METODO_POR_OMISION
+    mano = len(args) > 2 and args[2].lower().startswith('mano')
     sys.exit(probar_ejercicio(nc, metodo, mano))

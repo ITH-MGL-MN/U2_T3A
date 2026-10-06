@@ -20,15 +20,13 @@ a mano y con calculadora, así que los números tienen que ser amables. Los
 resultados (tabla, valor, derivada y cociente) los agrega
 `profe.core.solvers.resolver()` al seleccionar el ejercicio.
 """
-import builtins
-
 from profe.core.helpers import _fmt, _poly_latex
 from profe.core.markdown_loader import cargar_ejercicio_md, sustituir
 
 
 def _poly_funcs(a):
     """(P, P') a partir de los coeficientes [a_n, ..., a_0], término a término."""
-    n = builtins.len(a) - 1
+    n = len(a) - 1
 
     def P(x):
         total = 0.0
@@ -54,7 +52,7 @@ def _base(meta, ctx, a, x0, datos=None):
         **meta,
         'contexto': ctx,
         'a': [float(c) for c in a],
-        'grado': builtins.len(a) - 1,
+        'grado': len(a) - 1,
         'x0': float(x0),
         'x1': None, 'lam': None, 'delta': None,
         'f': P, 'df': dP, 'ddf': None, 'g': None, 'dg': None,

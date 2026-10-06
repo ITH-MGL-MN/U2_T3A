@@ -11,7 +11,6 @@ nombre del método.
 Todo lo que depende del alumno se sortea con una semilla derivada de su número
 de control, así que su tarea es reproducible.
 """
-import builtins
 import json
 import math
 import urllib.request
@@ -108,7 +107,7 @@ class Tarea(object):
             self.preguntas.append(p)
             self.soluciones.append(s)
 
-        self.maximo = builtins.sum(self.pesos)
+        self.maximo = sum(self.pesos)
 
     def _generar_teorica(self, banco_nom):
         """Pregunta de opción múltiple: elige del banco y baraja las opciones."""
@@ -182,11 +181,11 @@ class Tarea(object):
         etiquetas = [str(e) for e in (meta.get('etiquetas') or [])]
         if not etiquetas:
             etiquetas = [etq for etq, _fn in referencia]
-        if builtins.len(etiquetas) != builtins.len(sol):
+        if len(etiquetas) != len(sol):
             raise ValueError('La ficha %s.md declara %d etiquetas pero %s '
                              'reporta %d valores'
-                             % (ficha, builtins.len(etiquetas), metodo,
-                                builtins.len(sol)))
+                             % (ficha, len(etiquetas), metodo,
+                                len(sol)))
 
         p = {
             'titulo': '%s: %s' % (meta.get('etiqueta') or 'Coeficientes',
@@ -244,8 +243,8 @@ class Tarea(object):
             return False
         tol = p.get('tol')
         if tol is None:
-            return builtins.abs(num - sol) <= self.tol_simple * builtins.max(1.0, builtins.abs(sol))
-        return builtins.abs(num - sol) <= tol
+            return abs(num - sol) <= self.tol_simple * max(1.0, abs(sol))
+        return abs(num - sol) <= tol
 
     def calificar(self, respuestas, marco=None):
         """Devuelve una fila de detalle por pregunta (puntos, estado, solución)."""
@@ -294,12 +293,12 @@ class Tarea(object):
 
         aciertos = 0
         for j, esperado in enumerate(sol):
-            obtenido = valores[j] if j < builtins.len(valores) else None
+            obtenido = valores[j] if j < len(valores) else None
             if obtenido is not None and _igual_num(obtenido, esperado,
                                                    self.tol_simple):
                 aciertos += 1
 
-        n = builtins.len(sol)
+        n = len(sol)
         puntos = peso * aciertos / float(n)
         estado = ('correcta' if aciertos == n
                   else ('parcial' if aciertos else 'incorrecta'))
@@ -347,8 +346,8 @@ class Tarea(object):
                     except Exception:                  # noqa: BLE001
                         raiz, nit = None, None
                     if raiz is not None and nit is not None:
-                        bien_raiz = (builtins.abs(raiz - esperado)
-                                     <= self.tol_funcion * builtins.max(1.0, builtins.abs(esperado)))
+                        bien_raiz = (abs(raiz - esperado)
+                                     <= self.tol_funcion * max(1.0, abs(esperado)))
                         ok = bool(bien_raiz and 1 <= nit <= MAX_ITER_ALUMNO)
                 else:
                     # Varios valores a la vez: se comparan TODOS, componente a
@@ -378,8 +377,8 @@ class Tarea(object):
         realimentación al alumno se encarga `profe.ui.cuaderno`).
         """
         filas = self.calificar(respuestas, marco)
-        puntos = builtins.sum(f['puntos'] for f in filas)
-        maximo = builtins.sum(f['peso'] for f in filas)
+        puntos = sum(f['puntos'] for f in filas)
+        maximo = sum(f['peso'] for f in filas)
         calif = 100.0 * (puntos / maximo) if maximo > 0 else 0.0
 
         resultado = {
@@ -407,12 +406,12 @@ class Tarea(object):
             'tarea': self.id_tarea,
             'NC': self.nc,
             'correo': correo or self.alumno_id,
-            'calificacion': builtins.round(calif, 1),
-            'automatico': builtins.round(puntos, 2),
+            'calificacion': round(calif, 1),
+            'automatico': round(puntos, 2),
             'maximo': maximo,
-            'respuestas': [builtins.round(f['puntos'], 4) for f in filas],
+            'respuestas': [round(f['puntos'], 4) for f in filas],
             'pesos': list(self.pesos),
-            'maxPuntos': builtins.max(self.pesos) if self.pesos else 2,
+            'maxPuntos': max(self.pesos) if self.pesos else 2,
         }
         resultado['cuerpo'] = cuerpo
 
@@ -588,7 +587,7 @@ def _casos_func(metodo, rng):
         a = [float(rng.integers(1, 4))]
         for _k in range(grado):
             a.append(float(rng.integers(-6, 7)))
-        x0 = builtins.round(float(rng.uniform(-2.0, 3.0)), 2)
+        x0 = round(float(rng.uniform(-2.0, 3.0)), 2)
         casos.append(((a, x0), horner(a, x0)))
     return casos
 

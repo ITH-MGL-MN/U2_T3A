@@ -2,15 +2,13 @@
 """
 profe/core/helpers.py — Utilidades base de formateo y generación aleatoria.
 """
-import builtins
-
 def _r(rng, lo, hi, dec=4) -> float:
     """Genera un número flotante aleatorio entre [lo, hi] redondeado a 'dec' decimales."""
-    return builtins.round(float(rng.uniform(lo, hi)), dec)
+    return round(float(rng.uniform(lo, hi)), dec)
 
 def _fmt(v, dec=4) -> str:
     """Convierte un número a un texto LaTeX compacto."""
-    if v == int(v) and builtins.abs(v) < 1e6:
+    if v == int(v) and abs(v) < 1e6:
         return str(int(v))
     return ('%.' + str(dec) + 'f') % v
 
@@ -26,13 +24,13 @@ def _poly_latex(coefs, var='x', dec=4) -> str:
     `+ -4x^3` cuando el coeficiente era negativo, y `{r1}{b}` se imprimía
     como `24`, que es ambiguo (¿2·4 o veinticuatro?).
     """
-    n = builtins.len(coefs) - 1
+    n = len(coefs) - 1
     piezas = []
     for i, c in enumerate(coefs):
         grado = n - i
         if c == 0:
             continue
-        mag = builtins.abs(c)
+        mag = abs(c)
         if grado == 0:
             cuerpo = _fmt(mag, dec)
         elif grado == 1:
@@ -62,7 +60,7 @@ def _igual_num(a, b, tol) -> bool:
         return False
     if not (a == a and b == b):        # descarta nan
         return False
-    return builtins.abs(a - b) <= tol * builtins.max(1.0, builtins.abs(b))
+    return abs(a - b) <= tol * max(1.0, abs(b))
 
 def _igual(a, b, tol) -> bool:
     """
@@ -74,9 +72,9 @@ def _igual(a, b, tol) -> bool:
     """
     if isinstance(a, (list, tuple)) or isinstance(b, (list, tuple)):
         try:
-            if builtins.len(a) != builtins.len(b):
+            if len(a) != len(b):
                 return False
         except TypeError:
             return False
-        return builtins.all(_igual(x, y, tol) for x, y in zip(a, b))
+        return all(_igual(x, y, tol) for x, y in zip(a, b))
     return _igual_num(a, b, tol)

@@ -18,7 +18,6 @@ Comprueba que, para cada NC:
 
 Uso:  python profe/verificar_tarea.py [n_NC]
 """
-import builtins
 import contextlib
 import io
 import os
@@ -72,13 +71,13 @@ def respuesta_perfecta(ex):
 def main(n_nc=N_POR_OMISION):
     cfg, _ = obtener_configuracion()
     slots = cfg.get('slots') or []
-    total = builtins.sum(float(s.get('peso', 0)) for s in slots)
+    total = sum(float(s.get('peso', 0)) for s in slots)
     avisos = []
     titulos = set()
     polinomios = {'HORNER': set(), 'DEFLACION': set()}
 
     print('Slots: %d   puntos: %g   min para enviar: %g %%'
-          % (builtins.len(slots), total,
+          % (len(slots), total,
              100.0 * float(cfg['evaluacion']['min_aprobacion'])))
     print('NC revisados: %d\n' % n_nc)
     print('%-10s %-6s %-7s %-7s %-7s %s'
@@ -94,9 +93,9 @@ def main(n_nc=N_POR_OMISION):
         if ex.maximo != total:
             avisos.append('NC %s: maximo = %g y los slots suman %g'
                           % (nc, ex.maximo, total))
-        if builtins.len(ex.preguntas) != builtins.len(slots):
+        if len(ex.preguntas) != len(slots):
             avisos.append('NC %s: %d preguntas para %d slots'
-                          % (nc, builtins.len(ex.preguntas), builtins.len(slots)))
+                          % (nc, len(ex.preguntas), len(slots)))
         for j, slot in enumerate(slots):
             # El `tipo` del slot dice CÓMO se genera la pregunta; el `tipo` de
             # la pregunta generada dice QUÉ widget usa. No son lo mismo.
@@ -111,15 +110,15 @@ def main(n_nc=N_POR_OMISION):
         resp = respuesta_perfecta(ex)
         marco_ok = MarcoFalso({'horner': horner_experto})
         filas = ex.calificar(resp, marco_ok)
-        puntos = builtins.sum(f['puntos'] for f in filas)
+        puntos = sum(f['puntos'] for f in filas)
         if abs(puntos - total) > 1e-9:
             avisos.append('NC %s: el alumno perfecto saca %g de %g'
                           % (nc, puntos, total))
 
         marco_fijo = MarcoFalso({'horner': horner_fijo})
         filas_fijo = ex.calificar(resp, marco_fijo)
-        puntos_fijo = builtins.sum(f['puntos'] for f in filas_fijo)
-        peso_funcion = builtins.sum(f['peso'] for f, s in zip(filas_fijo, slots)
+        puntos_fijo = sum(f['puntos'] for f in filas_fijo)
+        peso_funcion = sum(f['peso'] for f, s in zip(filas_fijo, slots)
                                     if s.get('tipo') == 'funcion')
         if abs((total - puntos_fijo) - peso_funcion) > 1e-9:
             avisos.append('NC %s: el alumno de número fijo pierde %g puntos '
@@ -135,13 +134,13 @@ def main(n_nc=N_POR_OMISION):
                     avisos.append('NC %s: la pregunta de programación no tiene casos'
                                   % nc)
                 for (a, x0), esperado in casos:
-                    if builtins.len(esperado) != 3:
+                    if len(esperado) != 3:
                         avisos.append('NC %s: un caso oculto no devuelve 3 valores' % nc)
                     ref_caso = horner([float(c) for c in a], x0)
-                    if builtins.max(builtins.abs(u - v)
+                    if max(abs(u - v)
                                     for u, v in zip(esperado[:2], ref_caso[:2])) > 1e-12:
                         avisos.append('NC %s: el caso oculto no coincide con el solver' % nc)
-                    if builtins.len(esperado[2]) != builtins.len(ref_caso[2]):
+                    if len(esperado[2]) != len(ref_caso[2]):
                         avisos.append('NC %s: el cociente de un caso oculto tiene mal '
                                       'el número de coeficientes' % nc)
                 continue
@@ -171,10 +170,10 @@ def main(n_nc=N_POR_OMISION):
             elif p['tipo'] == 'vector':
                 fila_vector = s
                 Q, residuo = deflactar([float(c) for c in ej['a']], ej['x0'])
-                if builtins.len(s) != builtins.len(p['etiquetas']):
+                if len(s) != len(p['etiquetas']):
                     avisos.append('NC %s: %d valores y %d casillas'
-                                  % (nc, builtins.len(s), builtins.len(p['etiquetas'])))
-                if builtins.max(builtins.abs(u - v) for u, v in zip(s, Q)) > 1e-12:
+                                  % (nc, len(s), len(p['etiquetas'])))
+                if max(abs(u - v) for u, v in zip(s, Q)) > 1e-12:
                     avisos.append('NC %s: la solución del vector no es Q' % nc)
                 if abs(residuo) > 1e-9:
                     avisos.append('NC %s: el residuo de la deflación no es 0' % nc)
@@ -190,20 +189,20 @@ def main(n_nc=N_POR_OMISION):
                  cuerpo_resumen(ex, resp)))
 
     # 7) variedad -------------------------------------------------------------
-    if builtins.len(titulos) < 3:
+    if len(titulos) < 3:
         avisos.append('pocos enunciados distintos entre %d NC: %s'
                       % (n_nc, sorted(titulos)))
     for met, conjunto in polinomios.items():
-        if builtins.len(conjunto) < n_nc // 3:
+        if len(conjunto) < n_nc // 3:
             avisos.append('%s: solo %d polinomios distintos en %d NC'
-                          % (met, builtins.len(conjunto), n_nc))
+                          % (met, len(conjunto), n_nc))
 
     print()
     print('=' * 74)
     if avisos:
         for aviso in avisos[:25]:
             print('AVISO: %s' % aviso)
-        print(' RESULTADO: %d AVISOS' % builtins.len(avisos))
+        print(' RESULTADO: %d AVISOS' % len(avisos))
         print('=' * 74)
         return 1
     print(' RESULTADO: TODO OK  (0 avisos)')
@@ -257,7 +256,7 @@ def revisar_mano():
 
 
 if __name__ == '__main__':
-    n = int(sys.argv[1]) if builtins.len(sys.argv) > 1 else N_POR_OMISION
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else N_POR_OMISION
     salida = main(n)
     print()
     print('Flujo de las actividades a mano (1 NC):')

@@ -89,21 +89,32 @@ def celdas_de_codigo(ruta):
     return salida
 
 
-def ejecutar(ofuscado=False, verboso=False):
+def ejecutar(ofuscado=False, verboso=False, bundle=False):
     if not os.path.exists(CUADERNO):
         raise SystemExit('No encuentro %s' % CUADERNO)
     celdas = celdas_de_codigo(CUADERNO)
+    # El cuaderno carga el motor según MODO_MOTOR. Aquí se puede FORZAR un modo
+    # para probar los otros dos caminos sin tocar el cuaderno:
+    #   (ninguno)   -> lo que diga el cuaderno (normalmente "modulos")
+    #   --bundle    -> grader_local.py, el motor aplanado
+    #   --ofuscado  -> grader_ofuscado.txt, el blob de Colab
+    forzado = 'blob' if ofuscado else ('bundle' if bundle else None)
     print('Cuaderno : %s  (%d celdas de código)'
           % (os.path.basename(CUADERNO), len(celdas)))
-    print('Motor    : %s' % ('OFUSCADO (grader_ofuscado.txt)' if ofuscado
-                             else 'bundle legible (grader_local.py)'))
+    print('Motor    : %s' % (forzado or 'el que diga el cuaderno (MODO_MOTOR)'))
+
+    # La variable vive en la celda 1; si no está, el forzado no serviría de nada
+    # (y la prueba mentiría diciendo que probó el bundle o el blob).
+    patron_modo = r'MODO_MOTOR\s*=\s*["\'][a-z]+["\']'
+    if forzado and not any(re.search(patron_modo, c) for c in celdas):
+        raise SystemExit('El cuaderno no declara MODO_MOTOR: no se puede forzar '
+                         'el modo %r.' % forzado)
 
     ns = {'__name__': '__main__', 'alumno_id': NC_EJEMPLO}
     fallos, salidas = [], {}
     for i, codigo in enumerate(celdas, start=1):
-        if ofuscado and 'DEBUG_SIN_OFUSCAR = True' in codigo:
-            codigo = codigo.replace('DEBUG_SIN_OFUSCAR = True',
-                                    'DEBUG_SIN_OFUSCAR = False')
+        if forzado:
+            codigo = re.sub(patron_modo, 'MODO_MOTOR = "%s"' % forzado, codigo)
         if (re.search(r'(?m)^\s*enviar\(', codigo)
                 and not os.environ.get('MN_ENVIAR_REAL')):
             # Esta celda manda el POST de verdad y consume un intento del
@@ -194,6 +205,9 @@ if __name__ == '__main__':
                     help='contesta todo bien y comprueba el 100 / 100')
     ap.add_argument('--ofuscado', action='store_true',
                     help='usa grader_ofuscado.txt (el blob de Colab)')
+    ap.add_argument('--bundle', action='store_true',
+                    help='usa grader_local.py (el motor aplanado)')
     ap.add_argument('--verboso', action='store_true', help='lista cada celda')
     args = ap.parse_args()
-    sys.exit(ejecutar(ofuscado=args.ofuscado, verboso=args.verboso))
+    sys.exit(ejecutar(ofuscado=args.ofuscado, verboso=args.verboso,
+                      bundle=args.bundle))
