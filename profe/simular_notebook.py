@@ -14,6 +14,11 @@ respuestas correctas y llama a `enviar(debug=True)`. Comprueba:
   2. que un alumno perfecto saca 100 / 100;
   3. que el cuerpo del POST lleva `respuestas`, `pesos` y `maxPuntos`.
 
+La última celda del cuaderno (`enviar(alumno_id)`) se OMITE: haría un POST real
+contra la hoja y le gastaría un intento al alumno (solo se aceptan 2). Con la
+variable de entorno MN_ENVIAR_REAL=1 sí se ejecuta, y entonces conviene
+lanzarlo con un NC de prueba.
+
 Con `--ofuscado` se fuerza el cuaderno a cargar `grader_ofuscado.txt` en lugar
 del bundle legible, para verificar que el blob está al día.
 """
@@ -99,6 +104,12 @@ def ejecutar(ofuscado=False, verboso=False):
         if ofuscado and 'DEBUG_SIN_OFUSCAR = True' in codigo:
             codigo = codigo.replace('DEBUG_SIN_OFUSCAR = True',
                                     'DEBUG_SIN_OFUSCAR = False')
+        if (re.search(r'(?m)^\s*enviar\(', codigo)
+                and not os.environ.get('MN_ENVIAR_REAL')):
+            # Esta celda manda el POST de verdad y consume un intento del
+            # alumno: no la ejecutamos.
+            print('   [celda %d] se omite el envio real' % i)
+            continue
         buf = io.StringIO()
         try:
             with contextlib.redirect_stdout(buf):

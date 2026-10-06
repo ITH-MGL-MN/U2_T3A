@@ -8,15 +8,16 @@ puedes leer, copiar y usar en tus propios cuadernos cuando quieras.
 
     latex_cientifico(valor)               cifra en notación científica de LaTeX
     tabla_experimento(columnas, filas)    tabla de Markdown a partir de los datos
+    bits_flotante(numero, precision)      los bits IEEE 754: signo, exponente y mantisa
     graficar_polinomio(a, x0, raices)     la curva de P(x) con sus marcas
     graficar_errores(x, series)           varias curvas de error contra la misma x
 
 El cuaderno del curso la carga solo, en la celda de configuración
 (`from visualizar import ...`), así que basta con llamarlas. No dependen del
-motor: si copias este archivo a otro cuaderno, las cuatro funciones siguen
+motor: si copias este archivo a otro cuaderno, las funciones siguen
 funcionando igual (necesitan numpy, y matplotlib solo para las gráficas).
 
-Las cuatro siguen la misma regla, y es a propósito:
+Todas siguen la misma regla, y es a propósito:
 
     mostrar=True  (por omisión)   saca la tabla o la figura y no devuelve nada
     mostrar=False                 no saca nada y devuelve el texto o la figura
@@ -25,10 +26,12 @@ Así una celda que termina en `tabla_experimento(...)` muestra SOLO la tabla. Si
 la función devolviera el texto, el cuaderno lo imprimiría ADEMÁS como resultado
 de la celda, en texto plano y con sus `|` y sus `\\n` a la vista.
 """
+import struct
+
 import numpy as np
 
-__all__ = ['graficar_errores', 'graficar_polinomio', 'latex_cientifico',
-           'tabla_experimento']
+__all__ = ['bits_flotante', 'graficar_errores', 'graficar_polinomio',
+           'latex_cientifico', 'tabla_experimento']
 
 
 def _display(*objetos):
@@ -69,6 +72,115 @@ def latex_cientifico(valor, dec=3):
         return r"%s\times 10^{%d}" % (mantisa, int(exponente))
     except (TypeError, ValueError):
         return str(valor)
+
+
+# =====================================================================
+#  Bits (formato IEEE 754)
+# =====================================================================
+#  Ver los bits es lo único que hace tangible de dónde salen "unas 16 cifras"
+#  y "rango de 10^308": los bits del exponente dan el RANGO, y los de la
+#  mantisa la PRECISIÓN. Cambiar de float64 a float32 quita bits de los dos.
+_IEEE = {
+    # precisión: (nombre, molde al empaquetar, molde para leer el entero,
+    #             bits totales, bits de exponente, bits de mantisa)
+    'float64': ('doble, 64 bits', '>d', '>Q', 64, 11, 52),
+    'float32': ('simple, 32 bits', '>f', '>I', 32, 8, 23),
+}
+
+def bits_flotante(numero, precision='float64', mostrar=True):
+    """
+    Muestra la estructura IEEE 754 de un número: signo, exponente y mantisa.
+
+    Sirve para VER de dónde salen las 16 cifras y el rango. Escribe 0.1 y
+    cambia la precisión a `float32` para ver la diferencia entre simple y
+    doble: con 23 bits de mantisa el número guardado ya no es 0.1.
+
+    La tabla la dibuja `tabla_experimento`, así que se ve igual que las de los
+    laboratorios, y los bits van entre acentos graves para que salgan con ancho
+    fijo y se note dónde empieza cada sección.
+
+    Los números se escriben con `%r` en el título, la forma más corta que al
+    releerla da el mismo valor: para 0.1 sale `0.1`, que es lo que escribiste.
+    En 'Valor guardado' va el número de máquina con las cifras que hacen falta
+    para identificarlo, y en el pie su valor exacto. Así se distinguen las tres
+    cosas: lo que escribiste, lo que se guarda y lo que eso vale de verdad.
+
+    Parámetros
+    ----------
+    numero    : el número que se quiere inspeccionar
+    precision : 'float64' (por omisión) o 'float32'
+    mostrar   : True (por omisión) la imprime y no devuelve nada; con False
+                devuelve el texto de la tabla (para pegarlo en otro sitio o
+                comprobarlo desde una prueba)
+
+    Devuelve
+    --------
+    None si la imprimió, o el texto de la tabla si pediste `mostrar=False`.
+    """
+    if precision not in _IEEE:
+        raise ValueError("Precisión no soportada: usa 'float64' o 'float32'.")
+    nombre, empaqueta, desempaqueta, total, bits_exp, bits_mant = _IEEE[precision]
+
+    try:
+        datos = struct.pack(empaqueta, float(numero))
+    except (OverflowError, struct.error):
+        texto = ('**%r no cabe en %s**: el mayor es %.3e, y el menor normal '
+                 '%.3e. Ese es el otro lado del **rango**.'
+                 % (float(numero), precision, float(np.finfo(precision).max),
+                    float(np.finfo(precision).tiny)))
+        if mostrar:
+            _display(_markdown(texto))
+            return None
+        return texto
+
+    guardado = struct.unpack(empaqueta, datos)[0]
+    bits = bin(struct.unpack(desempaqueta, datos)[0])[2:].zfill(total)
+    signo = bits[0]
+    exp_bits = bits[1:1 + bits_exp]
+    mant_bits = bits[1 + bits_exp:]
+
+    sesgo = 2 ** (bits_exp - 1) - 1
+    crudo = int(exp_bits, 2)
+    if crudo == 0:
+        # Cero o subnormal: el 1 de delante de la mantisa no existe.
+        exponente, implicito = 1 - sesgo, 0.0
+    else:
+        exponente, implicito = crudo - sesgo, 1.0
+    filas = [
+        ['Signo ($S$)', '`%s`' % signo,
+         'positivo' if signo == '0' else 'negativo'],
+        ['Exponente ($E$)', '`%s`' % exp_bits,
+         '%d − %d = %d' % (crudo, sesgo, exponente)],
+        ['Mantisa ($M$)', '`%s`' % mant_bits,
+         'los %d bits que se suman a %d' % (bits_mant, implicito)],
+        ['En memoria', '`%s`' % ' '.join((signo, exp_bits, mant_bits)),
+         '%d bits, en este orden' % total],
+        ['Valor guardado', '`%.17g`' % guardado,
+         '±(%d.M) × 2^%d' % (implicito, exponente)],
+    ]
+    # Para el pie: `Decimal` da el valor exacto del binario, sin redondearlo a
+    # decimal, y `Fraction` sirve para saber si lo escrito y lo guardado son o
+    # no el mismo número.
+    from decimal import Decimal
+    from fractions import Fraction
+
+    avisos = []
+    if Fraction(repr(float(numero))) != Fraction(guardado):
+        avisos.append('**%r** no se guarda exacto: el número que queda en '
+                      'memoria, con todas sus cifras, es `%s`'
+                      % (float(numero), Decimal(guardado)))
+    if guardado != float(numero):
+        error = abs(guardado - float(numero)) / abs(float(numero))
+        avisos.append('y no es el que escribiste: difiere en `%r`, el %.1f %% '
+                      'del épsilon de %s'
+                      % (guardado - float(numero),
+                         100.0 * error / float(np.finfo(precision).eps),
+                         precision))
+
+    return tabla_experimento(
+        [('Sección', 'l'), ('Bits', 'l'), ('Qué es', 'l')], filas,
+        titulo='**%r** en **%s** (%s)' % (float(numero), precision, nombre),
+        pie='  \n'.join(avisos) or None, mostrar=mostrar)
 
 
 # =====================================================================

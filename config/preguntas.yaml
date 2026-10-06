@@ -4,8 +4,9 @@
 #  `correcta` es el índice (0 = la primera opción listada) de la opción
 #  buena. El motor baraja las opciones y reetiqueta a) b) c) d), así que la
 #  letra que ve el alumno NO es la de este archivo.
-#  HORNER_INTRO -> pregunta 1 (va al principio, antes de programar)
-#  HORNER_CONCL -> pregunta 6 (va al final, después de la deflación)
+#  FLOTANTES    -> pregunta 1 (va tras los laboratorios de flotantes)
+#  HORNER_INTRO -> pregunta 2 (va antes de programar)
+#  HORNER_CONCL -> pregunta 7 (va al final, después de la deflación)
 # =====================================================================
 HORNER_INTRO:
   - id: "hintro_01"
@@ -87,15 +88,15 @@ HORNER_CONCL:
     correcta: 0
 
   - id: "hconcl_03"
-    titulo: "Error de redondeo"
+    titulo: "Error de redondeo: qué se puede afirmar"
     pregunta: >-
-      Además del tiempo de cómputo, Horner tiene otra ventaja numérica.
-      **¿Cuál?**
+      Además del tiempo de cómputo, la forma anidada también cambia el error de
+      redondeo. **¿Qué se puede afirmar de ese error?**
     opciones:
-      - "a) Evita calcular potencias grandes como $x^{8}$: no amplifica el error de redondeo"
-      - "b) Obliga a redondear cada paso con 2 decimales"
-      - "c) Usa números enteros en lugar de flotantes"
-      - "d) Es más preciso porque ordena los coeficientes de menor a mayor"
+      - "a) Que suele ser algo más preciso, porque no arrastra el error de la cadena que calcula $x^k$; pero por factores pequeños y sin garantía"
+      - "b) Que es exacto: elimina por completo el error de redondeo"
+      - "c) Que da el mismo resultado bit a bit que la evaluación término a término"
+      - "d) Que empeora: al encadenar $n$ operaciones acumula más error que calcular las potencias"
     correcta: 0
 
   - id: "hconcl_04"
@@ -108,4 +109,95 @@ HORNER_CONCL:
       - "b) Volver a correr el método sobre el polinomio original con otro valor inicial, hasta agotar los intentos"
       - "c) Descartar esa raíz: no sirve para encontrar las demás"
       - "d) Convertirlo en un sistema de ecuaciones no lineales"
+    correcta: 0
+
+  - id: "hconcl_05"
+    titulo: "Qué garantiza siempre la forma anidada"
+    pregunta: >-
+      De las dos ventajas de Horner, una se cumple **siempre** y la otra depende
+      del problema. **¿Cuál se garantiza siempre?**
+    opciones:
+      - "a) El costo: $n$ multiplicaciones y $n$ sumas, es decir $O(n)$ en lugar de $O(n^2)$"
+      - "b) El error: queda del orden de $\\varepsilon$ por muy mal condicionado que esté el polinomio"
+      - "c) El resultado exacto, sin ningún redondeo"
+      - "d) Que el método ya no necesita evaluar el polinomio término a término"
+    correcta: 0
+
+# ---------------------------------------------------------------------
+#  Banco de FLOTANTES: se contesta justo después de los laboratorios de
+#  redondeo (B1 y B2) y de la celda de bits, así que TODO lo que pregunta
+#  se puede leer ahí arriba. Son las cuatro ideas que esos laboratorios
+#  acaban de medir: qué es ε, qué es κ, por qué la resta cancela y qué
+#  cambia entre float32 y float64.
+# ---------------------------------------------------------------------
+FLOTANTES:
+  - id: "flot_01"
+    titulo: "Qué mide el épsilon de la máquina"
+    pregunta: >-
+      Un `float` de 64 bits guarda unas **16 cifras significativas siempre**,
+      valga el número $10^{-160}$ o $10^{160}$. El épsilon de la máquina es
+      $\varepsilon = \texttt{np.finfo(float).eps} = 2^{-52} \approx 2.22\times10^{-16}$.
+      **¿Qué mide exactamente $\varepsilon$?**
+    opciones:
+      - "a) La distancia entre el $1.0$ y el siguiente número representable: el «peldaño» de la escalera alrededor del 1"
+      - "b) El número más pequeño que la máquina puede guardar, es decir el fondo del rango"
+      - "c) El número de cifras decimales que se muestran al imprimir un resultado"
+      - "d) El error absoluto máximo: en cada operación se pierden $2.22\\times10^{-16}$ unidades"
+    correcta: 0
+
+  - id: "flot_02"
+    titulo: "Quién decide los dígitos que se pierden"
+    pregunta: >-
+      En los laboratorios se evalúa el **mismo** polinomio término a término y con
+      la forma anidada, contra un valor exacto calculado con fracciones. Con uno
+      bien condicionado ($\kappa \approx 2$) los dos coinciden hasta el último bit;
+      con $(x-1)^n$ desarrollado ($\kappa$ enorme) los dos pierden todos los
+      dígitos. **¿Qué decide cuántos dígitos se conservan?**
+    opciones:
+      - "a) La condición de la evaluación, $\\kappa$: el error relativo va como $\\kappa\\,\\varepsilon$, no el método"
+      - "b) El método: la forma anidada siempre conserva más dígitos que la evaluación término a término"
+      - "c) El orden en que se escriben los coeficientes del polinomio"
+      - "d) La presentación de los resultados: mostrando más cifras aparecerían más dígitos buenos"
+    correcta: 0
+
+  - id: "flot_03"
+    titulo: "Por qué se pierden los dígitos al restar"
+    pregunta: >-
+      En el laboratorio mal condicionado se evalúa $P(x)=(x-1)^n$ **desarrollado**
+      en $x = 1.0001$: los términos del desarrollo valen hasta $\sim 10^{17}$
+      mientras el resultado verdadero es $10^{-4n}$. **¿Por qué se pierden los
+      dígitos?**
+    opciones:
+      - "a) Porque al restar números grandes y casi iguales se cancelan las cifras significativas que tenían en común"
+      - "b) Porque $\\binom{n}{k}$ es un número irracional y no se puede guardar"
+      - "c) Porque elevar a una potencia grande un número cercano a 1 ya pierde precisión por sí solo"
+      - "d) Porque son demasiadas operaciones y el error se acumula; con menos términos saldría exacto"
+    correcta: 0
+
+  - id: "flot_04"
+    titulo: "Qué cambia al pasar a float32"
+    pregunta: >-
+      En la celda de bits se ve que `0.1` en `float32` se guarda como
+      `0.100000001490116119384765625` y en `float64` como
+      `0.1000000000000000055511151231257827021181583404541015625`.
+      **¿Qué cambia entre las dos precisiones?**
+    opciones:
+      - "a) Las dos cosas: el rango (8 bits de exponente en lugar de 11) y la precisión (23 bits de mantisa en lugar de 52)"
+      - "b) Solo el rango: se guardan las mismas 16 cifras, pero con exponentes más pequeños"
+      - "c) Solo el número de cifras que se imprimen; el valor guardado es el mismo"
+      - "d) Nada: Python convierte siempre a `float64` antes de guardar"
+    correcta: 0
+
+  - id: "flot_05"
+    titulo: "Por qué el salto crece con la magnitud"
+    pregunta: >-
+      Alrededor del $1.0$ el salto entre números representables es
+      $2.22\times10^{-16}$, pero alrededor de $10^{15}$ es de **0.125** (12.5 cm),
+      y por eso `1e15 + 0.01 == 1e15` devuelve `True`.
+      **¿Por qué ese salto crece con la magnitud del número?**
+    opciones:
+      - "a) Porque las cifras significativas son fijas: el error relativo $\\varepsilon$ se traduce en un salto absoluto $\\approx |x|\\,\\varepsilon$"
+      - "b) Porque la máquina guarda menos cifras significativas cuando el número es grande"
+      - "c) Porque $10^{15}$ no se puede guardar de forma exacta en punto flotante"
+      - "d) Porque `np.spacing` redondea el resultado: el salto real no cambia"
     correcta: 0
