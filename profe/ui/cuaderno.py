@@ -772,82 +772,118 @@ def mano_referencia(metodo):
     return mano_solucion(metodo)
 
 
-def mano_ecuacion(metodo, f=None, df=None):
+def _puntos_ocultos(x0):
+    """Tres puntos para comparar funciones, sin repetir y todos finitos."""
+    xs = []
+    for cand in (x0, x0 + 1.0, x0 - 1.7, 0.0, x0 + 0.35):
+        cand = float(cand)
+        if not np.isfinite(cand):
+            continue
+        if all(abs(cand - v) > 1e-6 * max(1.0, abs(v)) for v in xs):
+            xs.append(cand)
+        if len(xs) == 3:
+            break
+    return xs
+
+
+def _comparar_funcion(fn_alumno, fn_ref, xs):
+    """(ok, detalle) de una función del alumno contra la de referencia."""
+    peor = 0.0
+    for x in xs:
+        try:
+            a, b = float(fn_alumno(x)), float(fn_ref(x))
+        except Exception as exc:                       # noqa: BLE001
+            return False, 'tu función falló en x=%.6g (%r)' % (x, exc)
+        if not (np.isfinite(a) and np.isfinite(b)):
+            continue
+        peor = max(peor, abs(a - b) / max(1.0, abs(b)))
+    return bool(peor <= 1e-9), 'diferencia relativa máxima %.2e' % peor
+
+
+def _comparar_coeficientes(dados, ref):
+    """(ok, detalle) de una lista de coeficientes contra la de referencia."""
+    if isinstance(dados, (str, bytes)):
+        return False, 'eso es texto, no una lista de coeficientes'
+    try:
+        vals = [float(v) for v in dados]
+    except (TypeError, ValueError):
+        return False, 'no pude leerlo como una lista de números'
+
+    def _cerca(u, v):
+        return abs(u - v) <= 1e-9 * max(1.0, abs(v))
+
+    if len(vals) == len(ref) and all(_cerca(u, v) for u, v in zip(vals, ref)):
+        return True, 'coinciden los %d coeficientes' % len(ref)
+    if len(vals) == len(ref) and all(_cerca(u, v) for u, v in zip(vals, reversed(ref))):
+        return False, ('te quedaron al revés: la lista va del término de MAYOR '
+                       'grado al de menor')
+    if len(vals) != len(ref):
+        return False, ('esperaba %d coeficientes y me diste %d; la lista va del '
+                       'término de MAYOR grado al de menor'
+                       % (len(ref), len(vals)))
+    return False, ('los números no coinciden; revisa los signos y que la lista '
+                   'vaya del término de MAYOR grado al de menor')
+
+
+def mano_ecuacion(metodo, f=None, df=None, a=None, da=None):
     """
-    Revisa la ECUACIÓN que escribió el alumno (como funciones lambda) contra
-    la del enunciado, evaluándola en puntos OCULTOS.
+    Revisa la ECUACIÓN del enunciado tal como la escribió el alumno, en sus DOS
+    representaciones: como funciones (`f`, `df`) y como coeficientes (`a`, `da`).
+
+    Las funciones se comprueban en puntos OCULTOS; los coeficientes, término a
+    término (avisando si van al revés).
 
     Cada método pide lo que usa:
-        HORNER    ->  P y P'
-        DEFLACION ->  P
-    El resultado queda en `_MANO_EC[metodo]` y se imprime en hoja_manual().
+        HORNER    ->  f, df, a, da
+        DEFLACION ->  f, a
+    El resultado queda en `_MANO_EC[metodo]` (un dict por nombre) y se imprime
+    en hoja_manual().
     """
     ej = (_MANO_EJ or {}).get(metodo)
     if ej is None:
         print('Primero ejecuta mano_enunciado(%r).' % metodo)
         return None
 
-    necesarias = {
-        'HORNER': (('P', f), ("P'", df)),
-        'DEFLACION': (('P', f),),
+    # (etiqueta, valor del alumno, referencia, ¿es lista de coeficientes?)
+    revisar = {
+        'HORNER': [('F', f, ej.get('f'), False),
+                   ('dF', df, ej.get('df'), False),
+                   ('P', a, ej.get('a'), True),
+                   ('dP', da, ej.get('da'), True)],
+        'DEFLACION': [('F', f, ej.get('f'), False),
+                      ('P', a, ej.get('a'), True)],
     }[metodo]
-    referencia = {'P': ej.get('f'), "P'": ej.get('df')}
 
-    # --- puntos ocultos: el punto del método y dos más, sin repetir ---------
-    x0 = float(ej.get('x0'))
-    xs = []
-    for cand in (x0, x0 + 1.0, x0 - 1.7, 0.0, x0 + 0.35):
-        cand = float(cand)
-        if not np.isfinite(cand):
+    xs = _puntos_ocultos(float(ej.get('x0')))
+    print('Revisión de TU ecuación (las funciones, en %d valores que no ves):'
+          % len(xs))
+    resultados, faltan, malas = {}, [], []
+    for etiqueta, valor, ref, es_lista in revisar:
+        if valor is None:
+            resultados[etiqueta] = False
+            faltan.append(etiqueta)
+            print('   %-3s : todavía no la escribiste' % etiqueta)
             continue
-        if all(abs(cand - v) > 1e-6 * max(1.0, abs(v))
-                        for v in xs):
-            xs.append(cand)
-        if len(xs) == 3:
-            break
-
-    print('Revisión de TU ecuación (en %d valores que no ves):' % len(xs))
-    todo_ok, faltan, malas = True, [], []
-    for nombre, fn_alumno in necesarias:
-        fn_ref = referencia.get(nombre)
-        if fn_alumno is None:
-            faltan.append(nombre)
-            todo_ok = False
-            print('   %-4s : todavía no la escribiste' % nombre)
+        if ref is None:
+            print('   %-3s : (este enunciado no la pide)' % etiqueta)
             continue
-        if fn_ref is None:
-            print('   %-4s : (este enunciado no la pide)' % nombre)
-            continue
-        peor, falla = 0.0, None
-        for x in xs:
-            try:
-                a, b = float(fn_alumno(x)), float(fn_ref(x))
-            except Exception as exc:                       # noqa: BLE001
-                falla = 'tu lambda falló en x=%.6g (%r)' % (x, exc)
-                break
-            if not (np.isfinite(a) and np.isfinite(b)):
-                continue
-            peor = max(peor, abs(a - b) /
-                                max(1.0, abs(b)))
-        if falla:
-            todo_ok = False
-            malas.append(nombre)
-            print('   %-4s : NO  -> %s' % (nombre, falla))
-        elif peor <= 1e-9:
-            print('   %-4s : OK  (diferencia relativa máxima %.2e)' % (nombre, peor))
+        if es_lista:
+            ok, detalle = _comparar_coeficientes(valor, ref)
         else:
-            todo_ok = False
-            malas.append(nombre)
-            print('   %-4s : NO coincide (diferencia relativa máxima %.2e)' % (nombre, peor))
+            ok, detalle = _comparar_funcion(valor, ref, xs)
+        resultados[etiqueta] = ok
+        if not ok:
+            malas.append(etiqueta)
+        print('   %-3s : %s  (%s)' % (etiqueta, 'OK' if ok else 'NO', detalle))
 
-    _MANO_EC[metodo] = bool(todo_ok)
-    if todo_ok:
-        print('✅ Tu ecuación coincide con la del enunciado.')
+    _MANO_EC[metodo] = resultados
+    if not faltan and not malas:
+        print('✅ La ecuación coincide con la del enunciado, en las dos formas.')
     elif faltan:
         print('⚠️ Falta escribir: %s' % ', '.join(faltan))
     else:
-        print('❌ Revisa %s: compárala con la fórmula del enunciado (paréntesis, '
-              'signos, potencias).' % ', '.join(malas))
+        print('❌ Revisa %s: compáralo con el enunciado (paréntesis, signos, '
+              'potencias y el orden de los coeficientes).' % ', '.join(malas))
     return None
 
 
@@ -878,8 +914,9 @@ def hoja_manual(metodo=None):
                                 (', '.join('%.6g' % v for v in alumno)
                                  if alumno else '(sin reportar)')))
         _ec = _MANO_EC.get(met)
-        print('  ecuación   : %s' % ('OK' if _ec else ('NO' if _ec is False
-                                                      else '(sin escribir)')))
+        print('  ecuación   : %s' % ('  ·  '.join(
+            '%s %s' % (etq, 'OK' if ok else 'NO') for etq, ok in _ec.items())
+            if _ec else '(sin escribir)'))
         print('  tabla      : %s' % ('acertada' if _MANO_RES.get(met)
                                      else ('revisar' if met in _MANO_RES
                                            else '(sin comprobar)')))

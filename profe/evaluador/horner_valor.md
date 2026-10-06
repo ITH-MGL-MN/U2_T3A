@@ -1,5 +1,5 @@
 ---
-etiqueta: "P(x_0)"
+etiqueta: "$P(x_0)$"
 respuesta: "p_val"
 unidad: "mV"
 ---

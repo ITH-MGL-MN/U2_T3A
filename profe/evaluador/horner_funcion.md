@@ -19,7 +19,7 @@ Tu función recibe:
 y devuelve **una tupla con tres elementos**, en este orden:
 
 1. `p_val` — el valor $P(x_0)$
-2. `dp_val` — la primera derivada $P\,'(x_0)$
+2. `dp_val` — la primera derivada $P'(x_0)$
 3. `Q` — la **lista** de coeficientes del cociente de dividir $P(x)$ entre
    $(x-x_0)$, también de mayor a menor grado (son los $b$ de la primera
    pasada, sin el último)
@@ -27,8 +27,3 @@ y devuelve **una tupla con tres elementos**, en este orden:
 Con el ejemplo `horner([1, -4, 5, -3, 2], 3.0)` debe devolver
 `(11.0, 27.0, [1.0, -1.0, 2.0, 3.0])`: el polinomio evaluado en 3, su
 derivada en 3 y el cúbico que resulta de dividirlo entre $(x-3)$.
-
-**No uses `numpy.polyval` ni símilares**: se califica que tu código haga el
-recorrido anidado. Fíjate en la diferencia con evaluar término a término: en
-la forma anidada **cada resultado se reutiliza** como el factor de la
-siguiente multiplicación.

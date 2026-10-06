@@ -23,9 +23,9 @@ el acondicionador, en **mV**.
 
 En el punto de operación $x_0 = {x_eval}$ necesitas dos cosas: el voltaje
 $P(x_0)$ y la **sensibilidad** del sensor, que es su primera derivada
-$P\,'(x_0)$.
+$P'(x_0)$.
 
 Ya tienes la tabla de la división sintética en blanco. Llénala **en el orden
 del algoritmo**: primero toda la fila $b_k$ (la división), y solo después la
-fila $c_k$ (la segunda corrida, que va sobre los $b_k$ que acabas de obtener).
+fila $c_k$ (la segunda ejecución, que va sobre los $b_k$ que acabas de obtener).
 No redondees los pasos intermedios.

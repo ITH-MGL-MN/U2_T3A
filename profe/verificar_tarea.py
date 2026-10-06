@@ -159,8 +159,10 @@ def main(n_nc=N_POR_OMISION):
                               'actividad a mano' % (nc, i))
 
             if p['tipo'] == 'simple':
-                clave = {'P(x_0)': 'p_val', "P'(x_0)": 'dp_val'}.get(
-                    p['titulo'].split(':')[0].strip())
+                # La etiqueta puede traer los $ del LaTeX (es lo que ve el
+                # alumno): para reconocer la pregunta se quita el adorno.
+                etq = p['titulo'].split(':')[0].strip().replace('$', '')
+                clave = {'P(x_0)': 'p_val', "P'(x_0)": 'dp_val'}.get(etq)
                 if clave is None:
                     avisos.append('NC %s: no reconozco la pregunta %r'
                                   % (nc, p['titulo']))
@@ -237,21 +239,30 @@ def revisar_mano():
                 cuaderno.mano_enunciado(metodo)
             ej = cuaderno._MANO_EJ[metodo]
             ref = [float(fn(ej)) for _etq, fn in MANO_REPORTE[metodo]]
-            cuaderno.mano_ecuacion(metodo, f=ej['f'], df=ej['df'])
+            cuaderno.mano_ecuacion(metodo, f=ej['f'], df=ej['df'],
+                                   a=ej['a'], da=ej['da'])
+            ok_ec = all(cuaderno._MANO_EC.get(metodo, {}).values())
+            # Y con la ecuación MAL escrita: tiene que rechazarla.
+            cuaderno.mano_ecuacion(metodo, f=lambda x: ej['f'](x) + 1.0,
+                                   df=ej['df'], a=[c + 1.0 for c in ej['a']],
+                                   da=ej['da'])
+            ok_ec_mal = all(cuaderno._MANO_EC.get(metodo, {}).values())
             cuaderno.mano_comprueba(metodo, ref)
             ok_ref = cuaderno._MANO_RES.get(metodo)
             cuaderno.mano_comprueba(metodo, [v + 1.0 for v in ref])
             ok_mal = cuaderno._MANO_RES.get(metodo)
-            ok_ec = cuaderno._MANO_EC.get(metodo)
         if not ok_ref:
             problemas.append('%s: la referencia no se acepta' % metodo)
         if ok_mal:
             problemas.append('%s: se acepta una respuesta equivocada' % metodo)
         if not ok_ec:
-            problemas.append('%s: la ecuación del enunciado no se reconoce' % metodo)
-        print('%-10s actividad a mano: referencia %s   valores malos %s   ecuación %s'
+            problemas.append('%s: la ecuación del enunciado no se reconoce'
+                            % metodo)
+        if ok_ec_mal:
+            problemas.append('%s: se acepta una ecuación equivocada' % metodo)
+        print('%-10s a mano: referencia %s  malos %s  ecuación %s  ecuación mala %s'
               % (metodo, 'OK' if ok_ref else 'FALLA', 'OK' if not ok_mal else 'NO',
-                 'OK' if ok_ec else 'FALLA'))
+                 'OK' if ok_ec else 'FALLA', 'OK' if not ok_ec_mal else 'NO'))
     return problemas
 
 

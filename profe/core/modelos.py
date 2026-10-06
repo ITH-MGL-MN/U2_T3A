@@ -45,6 +45,18 @@ def _poly_funcs(a):
     return P, dP
 
 
+def coefs_derivada(a):
+    """
+    Coeficientes de P' a partir de los de P, en el mismo orden y un grado menos.
+
+    Si P = [a_n, ..., a_0], entonces P' = [n*a_n, (n-1)*a_{n-1}, ..., 1*a_1].
+    Lo usa la actividad a mano: el alumno escribe la derivada también como lista
+    de coeficientes, y así se comprueba esa segunda representación.
+    """
+    n = len(a) - 1
+    return [float((n - i) * c) for i, c in enumerate(a[:n])]
+
+
 def _base(meta, ctx, a, x0, datos=None):
     """Diccionario común a todos los ejercicios de polinomios."""
     P, dP = _poly_funcs(a)
@@ -52,6 +64,7 @@ def _base(meta, ctx, a, x0, datos=None):
         **meta,
         'contexto': ctx,
         'a': [float(c) for c in a],
+        'da': coefs_derivada(a),
         'grado': len(a) - 1,
         'x0': float(x0),
         'x1': None, 'lam': None, 'delta': None,
